@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
@@ -11,6 +11,10 @@ import { HeightStep } from "@/components/onboarding/steps/HeightStep";
 import { SkinToneStep } from "@/components/onboarding/steps/SkinToneStep";
 import { StyleStep } from "@/components/onboarding/steps/StyleStep";
 import { PhotoUploadStep } from "@/components/onboarding/steps/PhotoUploadStep";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface OnboardingData {
   name: string;
@@ -28,7 +32,10 @@ const TOTAL_STEPS = 9;
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
   const [data, setData] = useState<OnboardingData>({
     name: "",
     gender: "",
@@ -40,6 +47,12 @@ const Onboarding = () => {
     styles: [],
     photo: null,
   });
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, authLoading, navigate]);
 
   const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
@@ -70,12 +83,53 @@ const Onboarding = () => {
     }
   };
 
+  const saveProfile = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+
+    try {
+      // For now, we'll skip photo upload and just save the profile data
+      // Photo upload can be added later with Supabase Storage
+      const { error } = await supabase.from("profiles").upsert({
+        user_id: user.id,
+        name: data.name,
+        gender: data.gender,
+        weather_preference: data.weather,
+        lifestyle: data.lifestyle,
+        body_type: data.bodyType,
+        height: data.height,
+        skin_tone: data.skinTone,
+        preferred_styles: data.styles,
+        photo_url: null, // Will implement photo upload later
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile saved!",
+        description: "Your preferences have been saved successfully.",
+      });
+
+      navigate("/suggestions");
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Error saving profile",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleContinue = () => {
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Final step - go to suggestions
-      navigate("/suggestions");
+      // Final step - save profile and go to suggestions
+      saveProfile();
     }
   };
 
@@ -110,16 +164,34 @@ const Onboarding = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <AnimatePresence mode="wait">
       <OnboardingLayout
         key={currentStep}
         currentStep={currentStep}
         totalSteps={TOTAL_STEPS}
-        canContinue={canContinue()}
+        canContinue={canContinue() && !isSaving}
         onContinue={handleContinue}
         onBack={currentStep > 1 ? handleBack : undefined}
-        continueLabel={currentStep === TOTAL_STEPS ? "See Outfit Suggestions" : "Continue"}
+        continueLabel={
+          currentStep === TOTAL_STEPS
+            ? isSaving
+              ? "Saving..."
+              : "See Outfit Suggestions"
+            : "Continue"
+        }
       >
         {renderStep()}
       </OnboardingLayout>
