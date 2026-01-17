@@ -1,17 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (user) {
+        // Check if user has a profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (profile) {
+          navigate("/suggestions");
+        } else {
+          navigate("/onboarding");
+        }
+      }
+    };
+    checkProfile();
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -20,8 +44,17 @@ const Login = () => {
       return;
     }
 
-    // Redirect to onboarding (or suggestions if returning user)
-    navigate("/onboarding");
+    setIsLoading(true);
+    const { error: signInError } = await signIn(email, password);
+    setIsLoading(false);
+
+    if (signInError) {
+      if (signInError.message.includes("Invalid login credentials")) {
+        setError("Invalid email or password");
+      } else {
+        setError(signInError.message);
+      }
+    }
   };
 
   const isValid = email && password;
@@ -60,6 +93,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="input-fashion border-b-2"
+                disabled={isLoading}
               />
             </div>
 
@@ -75,6 +109,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   className="input-fashion border-b-2 pr-12"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -92,10 +127,17 @@ const Login = () => {
 
             <Button
               type="submit"
-              disabled={!isValid}
+              disabled={!isValid || isLoading}
               className="btn-primary w-full disabled:opacity-40"
             >
-              Log In
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Log In"
+              )}
             </Button>
           </form>
 
