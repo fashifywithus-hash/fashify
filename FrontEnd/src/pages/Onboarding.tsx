@@ -267,7 +267,7 @@ const Onboarding = () => {
       });
 
       if (supabaseError) {
-        logger.warn("Supabase save warning", supabaseError, 'ONBOARDING');
+        logger.info("Supabase save warning", supabaseError, 'ONBOARDING');
         // Don't fail if Supabase save fails, backend is primary
       } else {
         logger.onboarding('Supabase save successful');

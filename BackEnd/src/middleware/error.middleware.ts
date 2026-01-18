@@ -44,7 +44,7 @@ export const notFoundHandler = (req: Request, res: Response): void => {
   const shouldIgnore = ignoredPaths.some(path => req.path.startsWith(path));
   
   if (!shouldIgnore) {
-    logger.warn('Route not found', { path: req.path, method: req.method }, 'NOT_FOUND');
+    logger.info('Route not found', { path: req.path, method: req.method }, 'NOT_FOUND');
   }
   
   const response: ApiResponseDto = {

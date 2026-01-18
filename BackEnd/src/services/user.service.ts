@@ -31,7 +31,7 @@ export class UserService {
       logger.database('findById', 'users', { userId: _id });
       const user = await User.findById(_id);
       if (!user) {
-        logger.warn('User not found for update', { userId: _id }, 'USER_SERVICE');
+        logger.info('User not found for update', { userId: _id }, 'USER_SERVICE');
         return {
           success: false,
           message: 'User not found'
@@ -40,6 +40,30 @@ export class UserService {
 
       // Update user personal information
       const updatedFields: string[] = [];
+      
+      // Handle userPic separately: if not provided or empty, use existing photo from DB
+      const hasNewPhoto = updateData.userPic !== undefined && 
+                          updateData.userPic !== null && 
+                          updateData.userPic !== '';
+      
+      if (!hasNewPhoto) {
+        // No new photo provided, preserve existing photo from database
+        if (user.userPic) {
+          logger.info('No new photo provided, using existing photo from database', {
+            userId: _id,
+            existingPhotoSize: `${(user.userPic.length / 1024).toFixed(2)}KB`
+          }, 'USER_SERVICE');
+          // Keep existing userPic, don't update it
+        } else {
+          logger.info('No photo provided and no existing photo in database', { userId: _id }, 'USER_SERVICE');
+        }
+        // Remove userPic from updateData so it doesn't get cleared
+        delete updateData.userPic;
+      } else {
+        // New photo provided, will be updated
+        updatedFields.push('userPic');
+      }
+      
       Object.keys(updateData).forEach((key) => {
         if (updateData[key as keyof typeof updateData] !== undefined) {
           let value = updateData[key as keyof typeof updateData];
@@ -48,7 +72,7 @@ export class UserService {
           if (key === 'gender' && typeof value === 'string') {
             value = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
             if (!['Male', 'Female', 'Other'].includes(value)) {
-              logger.warn('Invalid gender value, skipping', { value, userId: _id }, 'USER_SERVICE');
+              logger.info('Invalid gender value, skipping', { value, userId: _id }, 'USER_SERVICE');
               return; // Skip invalid gender values
             }
           }
@@ -58,12 +82,14 @@ export class UserService {
         }
       });
 
-      logger.debug('Updating user fields', { userId: _id, fields: updatedFields }, 'USER_SERVICE');
+      logger.info('Updating user fields', { userId: _id, fields: updatedFields }, 'USER_SERVICE');
       logger.database('save', 'users', { userId: _id });
       await user.save();
       logger.service('UserService', 'User updated successfully', { userId: _id });
 
       // Prepare user info for API call including user picture
+      // Use existing photo from DB if no new photo was provided
+      const userPicForApi = user.userPic ? user.userPic : undefined;
       const userInfoForApi = {
         name: user.name,
         gender: user.gender,
@@ -71,12 +97,14 @@ export class UserService {
         bodyType: user.bodyType,
         height: user.height,
         goToStyle: user.goToStyle,
-        userPic: user.userPic
+        userPic: userPicForApi
       };
 
       logger.service('UserService', 'Calling outfit suggestions API', {
         userId: _id,
         hasPhoto: !!userInfoForApi.userPic,
+        photoSource: hasNewPhoto ? 'new_upload' : (userPicForApi ? 'existing_db' : 'none'),
+        photoSize: userPicForApi ? `${(userPicForApi.length / 1024).toFixed(2)}KB` : 'N/A'
       });
       // Call nano banano API to get outfit suggestions based on user info and picture
       const wardrobeSuggestions = await getOutfitSuggestions(userInfoForApi);
@@ -116,7 +144,7 @@ export class UserService {
       const user = await User.findById(userId);
       
       if (!user) {
-        logger.warn('User not found', { userId }, 'USER_SERVICE');
+        logger.info('User not found', { userId }, 'USER_SERVICE');
         return {
           success: false,
           message: 'User not found'

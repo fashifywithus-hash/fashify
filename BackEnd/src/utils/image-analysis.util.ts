@@ -15,7 +15,7 @@ export const validateFullBodyImage = async (userPic: string): Promise<{
   isValid: boolean;
   message?: string;
 }> => {
-  logger.debug('Starting image validation', { 
+  logger.info('Starting image validation', { 
     imageLength: userPic.length,
     isDataUrl: userPic.startsWith('data:image/'),
   }, 'IMAGE_VALIDATION');
@@ -23,7 +23,7 @@ export const validateFullBodyImage = async (userPic: string): Promise<{
   try {
     // Use basic heuristic validation
     // For production, you could use Gemini Vision API or other image analysis services
-    logger.debug('Using basic validation', null, 'IMAGE_VALIDATION');
+    logger.info('Using basic validation', null, 'IMAGE_VALIDATION');
     const result = await basicFullBodyValidation(userPic);
     logger.info('Basic validation completed', { isValid: result.isValid }, 'IMAGE_VALIDATION');
     return result;
@@ -57,7 +57,7 @@ const basicFullBodyValidation = async (userPic: string): Promise<{
     
     // Check if base64 data exists
     if (!base64Data || base64Data.length === 0) {
-      logger.warn('Invalid base64 image data', { hasData: !!base64Data }, 'IMAGE_VALIDATION');
+      logger.info('Invalid base64 image data', { hasData: !!base64Data }, 'IMAGE_VALIDATION');
       return {
         isValid: false,
         message: 'Invalid image data. Please upload a valid image file.'
@@ -65,21 +65,21 @@ const basicFullBodyValidation = async (userPic: string): Promise<{
     }
     
     const sizeKB = (base64Data.length / 1024).toFixed(2);
-    logger.debug('Checking image size', { sizeKB, base64Length: base64Data.length }, 'IMAGE_VALIDATION');
+    logger.info('Checking image size', { sizeKB, base64Length: base64Data.length }, 'IMAGE_VALIDATION');
     
     // Lowered threshold: compressed images can be smaller (at least 10KB base64 encoded)
     // This is more lenient to account for image compression
     if (base64Data.length < 10000) {
-      logger.warn('Image too small', { sizeKB, requiredKB: '10KB' }, 'IMAGE_VALIDATION');
+      logger.info('Image too small', { sizeKB, requiredKB: '10KB' }, 'IMAGE_VALIDATION');
       return {
         isValid: false,
         message: 'Image appears too small. Please upload a higher resolution image.'
       };
     }
     
-    logger.debug('Image size validation passed', { sizeKB }, 'IMAGE_VALIDATION');
+    logger.info('Image size validation passed', { sizeKB }, 'IMAGE_VALIDATION');
   } else if (!userPic || userPic.trim().length === 0) {
-    logger.warn('Empty image provided', null, 'IMAGE_VALIDATION');
+    logger.info('Empty image provided', null, 'IMAGE_VALIDATION');
     return {
       isValid: false,
       message: 'Image is required. Please upload a photo.'

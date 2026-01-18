@@ -38,7 +38,7 @@ export class UserController {
         };
         res.status(200).json(response);
       } else {
-        logger.warn('Update personal info failed', { message: result.message, userId: _id }, 'USER_CONTROLLER');
+        logger.info('Update personal info failed', { message: result.message, userId: _id }, 'USER_CONTROLLER');
         const response: ApiResponseDto = {
           success: false,
           message: result.message
@@ -76,7 +76,7 @@ export class UserController {
         };
         res.status(200).json(response);
       } else {
-        logger.warn('Get personal info failed', { message: result.message, userId: _id }, 'USER_CONTROLLER');
+        logger.info('Get personal info failed', { message: result.message, userId: _id }, 'USER_CONTROLLER');
         const response: ApiResponseDto = {
           success: false,
           message: result.message

@@ -28,7 +28,7 @@ export class AuthService {
 
       // Validate email
       if (!validateEmail(email)) {
-        logger.warn('Invalid email format', { email: sanitizedEmail }, 'AUTH_SERVICE');
+        logger.info('Invalid email format', { email: sanitizedEmail }, 'AUTH_SERVICE');
         return {
           success: false,
           message: 'Invalid email format'
@@ -37,7 +37,7 @@ export class AuthService {
 
       // Validate password
       if (!validatePassword(password)) {
-        logger.warn('Invalid password format', null, 'AUTH_SERVICE');
+        logger.info('Invalid password format', null, 'AUTH_SERVICE');
         return {
           success: false,
           message: 'Password must be at least 6 characters long'
@@ -55,7 +55,7 @@ export class AuthService {
         const isPasswordValid = await comparePassword(password, existingUser.password);
         
         if (!isPasswordValid) {
-          logger.warn('Login failed: invalid password', { userId: existingUser._id.toString() }, 'AUTH_SERVICE');
+          logger.info('Login failed: invalid password', { userId: existingUser._id.toString() }, 'AUTH_SERVICE');
           return {
             success: false,
             message: 'Invalid email or password'
@@ -110,7 +110,7 @@ export class AuthService {
       
       // Handle duplicate key error (MongoDB unique constraint)
       if (error.code === 11000) {
-        logger.warn('Duplicate email', { errorCode: error.code }, 'AUTH_SERVICE');
+        logger.info('Duplicate email', { errorCode: error.code }, 'AUTH_SERVICE');
         return {
           success: false,
           message: 'User with this email already exists'

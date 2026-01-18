@@ -1,36 +1,18 @@
 /**
  * Backend Logging Utility
  * Provides structured logging for debugging and error tracking
+ * Only supports info and error levels
  */
 
-type LogLevel = 'info' | 'warn' | 'error' | 'debug';
-
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development';
-  private enableDebug = process.env.DEBUG_LOGS === 'true';
-
-  private log(level: LogLevel, message: string, data?: any, context?: string): void {
+  private log(level: 'info' | 'error', message: string, data?: any, context?: string): void {
     const prefix = `[${new Date().toISOString()}] [${context || 'APP'}]`;
     
-    // Always log errors
     if (level === 'error') {
       console.error(`${prefix} ${message}`, data ? JSON.stringify(data, null, 2) : '');
-      return;
-    }
-
-    // Log warnings
-    if (level === 'warn') {
-      console.warn(`${prefix} ${message}`, data ? JSON.stringify(data, null, 2) : '');
-      return;
-    }
-
-    // Log info/debug only in development or when debug is enabled
-    if (this.isDevelopment || this.enableDebug) {
-      if (level === 'info') {
-        console.log(`${prefix} ${message}`, data ? JSON.stringify(data, null, 2) : '');
-      } else if (level === 'debug') {
-        console.debug(`${prefix} ${message}`, data ? JSON.stringify(data, null, 2) : '');
-      }
+    } else {
+      // Always log info
+      console.log(`${prefix} ${message}`, data ? JSON.stringify(data, null, 2) : '');
     }
   }
 
@@ -38,16 +20,8 @@ class Logger {
     this.log('info', message, data, context);
   }
 
-  warn(message: string, data?: any, context?: string): void {
-    this.log('warn', message, data, context);
-  }
-
   error(message: string, error?: any, context?: string): void {
     this.log('error', message, error, context);
-  }
-
-  debug(message: string, data?: any, context?: string): void {
-    this.log('debug', message, data, context);
   }
 
   // Specialized logging methods
@@ -65,7 +39,7 @@ class Logger {
   }
 
   validation(field: string, value: any, result: boolean, message?: string): void {
-    this.debug(`Validation: ${field}`, { 
+    this.info(`Validation: ${field}`, { 
       value: this.sanitizeValue(value), 
       isValid: result,
       message 
@@ -77,7 +51,7 @@ class Logger {
   }
 
   database(operation: string, collection: string, data?: any): void {
-    this.debug(`DB ${operation}: ${collection}`, data, 'DATABASE');
+    this.info(`DB ${operation}: ${collection}`, data, 'DATABASE');
   }
 
   // Sanitize sensitive data

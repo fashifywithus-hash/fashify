@@ -36,7 +36,7 @@ export class AuthController {
         const statusCode = result.user.action === 'signup' ? 201 : 200;
         res.status(statusCode).json(response);
       } else {
-        logger.warn('Signup/Login failed', { message: result.message }, 'AUTH_CONTROLLER');
+        logger.info('Signup/Login failed', { message: result.message }, 'AUTH_CONTROLLER');
         const response: ApiResponseDto = {
           success: false,
           message: result.message

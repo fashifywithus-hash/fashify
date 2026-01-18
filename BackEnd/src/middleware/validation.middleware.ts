@@ -14,7 +14,7 @@ export const handleValidationErrors = (
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
-    logger.warn('Validation failed', {
+    logger.info('Validation failed', {
       path: req.path,
       method: req.method,
       errors: errors.array(),
@@ -29,6 +29,6 @@ export const handleValidationErrors = (
     return;
   }
   
-  logger.debug('Validation passed', { path: req.path, method: req.method }, 'VALIDATION');
+  logger.info('Validation passed', { path: req.path, method: req.method }, 'VALIDATION');
   next();
 };

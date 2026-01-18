@@ -5,7 +5,7 @@ import { RefreshCw, Settings, Camera, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useBackendAuth } from "@/hooks/useBackendAuth";
 import { apiClient } from "@/lib/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { WardrobeResponse } from "@/lib/api";
 
@@ -19,6 +19,7 @@ const Suggestions = () => {
     location.state?.wardrobe || null
   );
   const [loading, setLoading] = useState(!wardrobeData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // If we have wardrobe data from navigation, use it
@@ -154,6 +155,138 @@ const Suggestions = () => {
     }
   };
 
+
+  // Convert File to base64 string with compression
+  const fileToBase64 = (file: File, maxSizeMB: number = 2): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // Check file size first
+      const fileSizeMB = file.size / (1024 * 1024);
+      
+      if (fileSizeMB > maxSizeMB) {
+        // Compress image if too large
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Calculate new dimensions to keep under maxSizeMB
+            const maxDimension = 1920; // Max width/height
+            if (width > maxDimension || height > maxDimension) {
+              const ratio = Math.min(maxDimension / width, maxDimension / height);
+              width = width * ratio;
+              height = height * ratio;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject(new Error('Could not get canvas context'));
+              return;
+            }
+            
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error('Failed to compress image'));
+                  return;
+                }
+                const reader2 = new FileReader();
+                reader2.onload = () => resolve(reader2.result as string);
+                reader2.onerror = (error) => reject(error);
+                reader2.readAsDataURL(blob);
+              },
+              'image/jpeg',
+              0.85 // Quality
+            );
+          };
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = e.target?.result as string;
+        };
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      } else {
+        // File is small enough, just convert to base64
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!backendUserId) {
+      toast({
+        title: "Error",
+        description: "Please complete onboarding first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert file to base64
+      const base64Image = await fileToBase64(file);
+      
+      toast({
+        title: "Uploading photo...",
+        description: "Processing your new photo and generating outfit suggestions.",
+      });
+
+      // Update personal info with new photo
+      const updateResponse = await apiClient.updatePersonalInfo({
+        _id: backendUserId,
+        userPic: base64Image,
+      });
+
+      if (updateResponse.success && updateResponse.data) {
+        setWardrobeData(updateResponse.data);
+        toast({
+          title: "Photo updated!",
+          description: "Your new outfit suggestions are ready.",
+        });
+      } else {
+        throw new Error(updateResponse.message || 'Failed to update photo');
+      }
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload photo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const outfits = wardrobeData?.wardrobe || fallbackOutfits;
   return (
     <div className="min-h-screen bg-background">
@@ -260,7 +393,19 @@ const Suggestions = () => {
             <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
             {loading ? "Loading..." : "Try another look"}
           </Button>
-          <Button variant="outline" className="btn-secondary">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            className="hidden"
+          />
+          <Button 
+            variant="outline" 
+            className="btn-secondary"
+            onClick={handleUploadClick}
+            disabled={loading}
+          >
             <Camera className="w-4 h-4 mr-2" />
             Upload new photo
           </Button>

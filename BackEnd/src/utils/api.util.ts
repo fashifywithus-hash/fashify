@@ -22,19 +22,19 @@ const VIRTUAL_TRY_ON_ACCESS_TOKEN = process.env.VIRTUAL_TRY_ON_ACCESS_TOKEN || n
 let openaiClient: OpenAI | null = null;
 
 const getOpenAIClient = (): OpenAI | null => {
-  logger.debug('Getting OpenAI client', {
+  logger.info('Getting OpenAI client', {
     alreadyInitialized: !!openaiClient
   }, 'API_UTIL');
 
   if (openaiClient) {
-    logger.debug('Returning existing OpenAI client', null, 'API_UTIL');
+    logger.info('Returning existing OpenAI client', null, 'API_UTIL');
     return openaiClient;
   }
 
   logger.info('Initializing OpenAI client', null, 'API_UTIL');
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
-  logger.debug('Checking OpenAI API key', {
+  logger.info('Checking OpenAI API key', {
     hasKey: !!openaiApiKey,
     keyLength: openaiApiKey ? openaiApiKey.length : 0,
     keyPrefix: openaiApiKey ? openaiApiKey.substring(0, 15) + '...' : 'N/A',
@@ -66,7 +66,7 @@ const getOpenAIClient = (): OpenAI | null => {
       return null;
     }
   } else {
-    logger.warn('⚠️ OpenAI API key not configured or invalid', {
+    logger.info('⚠️ OpenAI API key not configured or invalid', {
       hasKey: !!openaiApiKey,
       isEmpty: !openaiApiKey || openaiApiKey.trim() === '',
       isPlaceholder: openaiApiKey === 'your_openai_api_key_here',
@@ -107,7 +107,7 @@ const analyzeUserPhotoForPrompt = async (userPicBase64?: string): Promise<string
             content: [
               {
                 type: 'text',
-                text: 'Analyze this full-body photo and describe the person\'s appearance in detail, focusing on: body type, height proportions, skin tone, hair color/length, current clothing style, and any distinctive features. Be specific but concise. This will be used to generate personalized outfit suggestions.'
+                text: 'Analyze this full-body photo in EXTREME DETAIL. You are describing this person so accurately that an AI image generator can recreate them exactly. Include: 1) EXACT body type and build (slim/thin, athletic/muscular, curvy/hourglass, plus-size, petite, tall, etc.), 2) Precise body proportions (shoulder width relative to hips, waist-to-hip ratio, leg length relative to torso, arm length, etc.), 3) Height/build estimate (short/petite, average, tall, etc.), 4) Skin tone (very specific - light/medium/dark with undertones if visible), 5) Hair details (exact color, length, texture, style - straight/curly/wavy, bangs, etc.), 6) Facial features (face shape - round/oval/square/heart, eye color if visible, distinctive features), 7) Current pose and stance (how they are standing, arm position, etc.), 8) Any distinctive physical characteristics (tattoos, piercings, etc. if visible). Be EXTREMELY specific and detailed - this description will be used to generate an outfit image showing THIS EXACT SAME PERSON. The AI must be able to recreate this person\'s appearance precisely from your description.'
               },
               {
                 type: 'image_url',
@@ -118,7 +118,7 @@ const analyzeUserPhotoForPrompt = async (userPicBase64?: string): Promise<string
             ]
           }
         ],
-        max_tokens: 200
+        max_tokens: 600 // Increased significantly for extremely detailed analysis
       });
 
       if (response.choices?.[0]?.message?.content) {
@@ -128,10 +128,10 @@ const analyzeUserPhotoForPrompt = async (userPicBase64?: string): Promise<string
           analysisPreview: analysis.substring(0, 100) + '...'
         }, 'API_UTIL');
         
-        return `Based on the person's appearance: ${analysis}. The outfit should be personalized to match their body type, proportions, and natural features.`;
+        return `CRITICAL: The generated image MUST show THIS EXACT PERSON from the reference photo. Person appearance details: ${analysis}. The generated outfit image must preserve ALL of these characteristics: exact same body type, body proportions, height/build, skin tone, hair color and style, facial features, and physical appearance. This is the SAME person, just wearing different clothes.`;
       }
     } catch (error: any) {
-      logger.warn('⚠️ Failed to analyze photo with Vision API, using basic context', {
+      logger.info('⚠️ Failed to analyze photo with Vision API, using basic context', {
         error: error.message,
         code: error.code
       }, 'API_UTIL');
@@ -139,8 +139,8 @@ const analyzeUserPhotoForPrompt = async (userPicBase64?: string): Promise<string
   }
 
   // Fallback: Basic context without Vision API analysis
-  logger.debug('Using basic photo context (Vision API not available or failed)', null, 'API_UTIL');
-  return 'The outfit should be personalized to match the person\'s appearance, body type, and proportions shown in their photo.';
+  logger.info('Using basic photo context (Vision API not available or failed)', null, 'API_UTIL');
+  return 'CRITICAL: Generate the outfit on the EXACT SAME PERSON from the reference photo. The generated image must show this specific person wearing the suggested outfit, preserving their exact body type, proportions, height, build, skin tone, hair, facial features, and all physical characteristics. This is the same person, just with new clothes.';
 };
 
 /**
@@ -252,35 +252,87 @@ const buildOutfitPrompt = async (userInfo: {
   // Get photo-based personalization (async - uses Vision API if available)
   const photoContext = await analyzeUserPhotoForPrompt(userInfo.userPic);
   
-  // Build the main description with style variant if provided
-  let mainDescription = `A professional full-body fashion photograph of a ${gender}${bodyType}${height} wearing a ${styleDescription} outfit`;
+  // Build comprehensive prompt incorporating all user personal info
+  let prompt = '';
   
-  if (styleVariant) {
-    mainDescription += ` styled for ${styleVariant.toLowerCase()}`;
+  if (hasUserPhoto) {
+    // When user has a photo - generate outfit ON that specific person
+    prompt = `Generate a professional full-body fashion photograph showing the EXACT SAME PERSON from the user's uploaded reference photo. 
+
+PERSON DETAILS FROM REFERENCE PHOTO:
+${photoContext}
+
+USER PREFERENCES FOR OUTFIT:
+- Gender: ${gender}
+- Body Type: ${bodyType || 'standard'}
+- Height: ${height || 'average'}
+- Style Preference: ${styleDescription}
+
+OUTFIT REQUIREMENTS:
+The person is wearing a complete, well-coordinated ${styleDescription} outfit that includes:
+- A stylish top or shirt that fits their ${bodyType || 'body type'} perfectly
+- A matching bottom piece (pants, skirt, or shorts) that complements the top and suits their ${height || 'height'} and proportions
+- Appropriate footwear that completes the look
+- Subtle accessories that enhance the overall ${styleDescription} style
+
+CRITICAL REQUIREMENTS - THE PERSON MUST BE IDENTICAL:
+- The person in the generated image MUST be the EXACT SAME person from the user's uploaded photo
+- Preserve their EXACT body type, body proportions, height, build, and physical frame
+- Match their EXACT skin tone, hair color, hair style, and facial features
+- Maintain their same pose, stance, and body positioning
+- The outfit should be shown on THIS SPECIFIC PERSON, not a generic model or different person
+- The generated image should look like the user's photo but with the new ${styleDescription} outfit
+- The clothing should fit their body type (${bodyType || 'standard'}) and height (${height || 'average'}) perfectly`;
+    
+    logger.info('Including user photo context in prompt - generating outfit ON user photo', {
+      photoSize: userInfo.userPic ? `${(userInfo.userPic.length / 1024).toFixed(2)}KB` : 'N/A',
+      gender,
+      bodyType,
+      height,
+      style: styleDescription
+    }, 'API_UTIL');
+  } else {
+    // No photo - generate based on personal info only
+    prompt = `A professional full-body fashion photograph of a ${gender}${bodyType}${height} wearing a ${styleDescription} outfit.
+
+The person is wearing a complete, well-coordinated outfit that includes:
+- A stylish top or shirt that fits their ${bodyType || 'body type'} perfectly
+- A matching bottom piece (pants, skirt, or shorts) that complements the top and suits their ${height || 'height'}
+- Appropriate footwear that completes the look
+- Subtle accessories that enhance the overall ${styleDescription} style
+
+The outfit should be designed specifically for:
+- Body Type: ${bodyType || 'standard'}
+- Height: ${height || 'average'}
+- Style: ${styleDescription}`;
   }
   
-  mainDescription += '.';
-  
-  // Build personalized prompt
-  let prompt = `${mainDescription}
-
-The person is wearing a complete, well-coordinated outfit that includes a stylish top or shirt that fits their body type perfectly, a matching bottom piece (pants, skirt, or shorts) that complements the top, appropriate footwear that completes the look, and subtle accessories that enhance the overall style.`;
-
-  // Add photo-based personalization if user provided a photo
-  if (hasUserPhoto) {
-    prompt += `\n\n${photoContext} The outfit should complement their natural features, body proportions, and personal style as shown in their reference photo.`;
-    logger.debug('Including user photo context in prompt', {
-      photoSize: userInfo.userPic ? `${(userInfo.userPic.length / 1024).toFixed(2)}KB` : 'N/A'
-    }, 'API_UTIL');
+  if (styleVariant) {
+    prompt += `\n\nStyle variant: ${styleVariant.toLowerCase()}`;
   }
 
   prompt += `
 
-The photograph is taken in a professional studio setting with a clean, neutral background (white or light gray). The lighting is soft and even, highlighting the clothing details and textures. The image is a full-body shot from head to toe, captured with a slightly elevated camera angle to show the complete outfit clearly. The person stands in a natural, confident pose${hasUserPhoto ? ', matching the pose and proportions from their reference photo' : ''}.
+PHOTOGRAPHY STYLE:
+- Professional studio setting with clean, neutral background (white or light gray)
+- Soft, even lighting highlighting clothing details and textures
+- Full-body shot from head to toe
+- Slightly elevated camera angle showing the complete outfit clearly
+${hasUserPhoto ? '- Person stands in the SAME pose and stance as their reference photo' : '- Person stands in a natural, confident pose'}
 
-The outfit features a modern and fashionable design with a well-coordinated color palette. The fit is appropriate for the body type, and the overall aesthetic is professional yet approachable. The clothing has clean lines and quality fabrics that are clearly visible in the photograph.
+OUTFIT DESIGN:
+- Modern and fashionable design with well-coordinated color palette
+- Perfect fit for ${bodyType || 'their'} body type
+- Appropriate for ${height || 'their'} height and proportions
+- Professional yet approachable aesthetic
+- Clean lines and quality fabrics clearly visible
+- Style: ${styleDescription}, suitable for everyday wear while maintaining a polished appearance
 
-The final image should look like a high-quality fashion catalog or e-commerce product photo, with the outfit being the clear focal point. The style is ${styleDescription}, making it suitable for everyday wear while maintaining a polished appearance.`;
+FINAL IMAGE QUALITY:
+- High-quality fashion catalog or e-commerce product photo
+- Outfit is the clear focal point
+- Professional photography standards
+${hasUserPhoto ? '- The person must be recognizable as the SAME person from the reference photo' : ''}`;
 
   return prompt;
 };
@@ -302,14 +354,9 @@ export const generateVirtualTryOn = async (
     // Virtual Try-On API requires OAuth2 Bearer token, not API key
     const accessToken = VIRTUAL_TRY_ON_ACCESS_TOKEN;
     if (!accessToken) {
-      logger.warn('⚠️ Virtual Try-On requires VIRTUAL_TRY_ON_ACCESS_TOKEN (OAuth2 Bearer token), but none provided', null, 'API_UTIL');
-      logger.warn('Please set VIRTUAL_TRY_ON_ACCESS_TOKEN in your .env file', null, 'API_UTIL');
-      logger.warn('To get the token:', null, 'API_UTIL');
-      logger.warn('  1. Install Google Cloud SDK: https://cloud.google.com/sdk/docs/install', null, 'API_UTIL');
-      logger.warn('  2. Run: gcloud auth application-default login', null, 'API_UTIL');
-      logger.warn('  3. Run: gcloud auth print-access-token', null, 'API_UTIL');
-      logger.warn('  4. Copy the token and add to .env: VIRTUAL_TRY_ON_ACCESS_TOKEN=<token>', null, 'API_UTIL');
-      logger.warn('  Note: Token expires after 1 hour. For production, use service account.', null, 'API_UTIL');
+      logger.info('ℹ️ Virtual Try-On not available (VIRTUAL_TRY_ON_ACCESS_TOKEN not set). Falling back to direct outfit generation.', {
+        setupInstructions: 'To enable: 1) Install gcloud SDK, 2) Run: gcloud auth application-default login, 3) Run: gcloud auth print-access-token, 4) Add token to .env as VIRTUAL_TRY_ON_ACCESS_TOKEN'
+      }, 'API_UTIL');
       return null;
     }
 
@@ -321,7 +368,7 @@ export const generateVirtualTryOn = async (
 
     // If no product images provided, we can't use virtual try-on
     if (productImagesBase64.length === 0) {
-      logger.warn('Virtual Try-On requires product images, but none provided', null, 'API_UTIL');
+      logger.info('Virtual Try-On requires product images, but none provided', null, 'API_UTIL');
       return null;
     }
 
@@ -399,7 +446,7 @@ export const generateVirtualTryOn = async (
       return imageDataUrl;
     }
 
-    logger.warn('Virtual Try-On response missing image data', {
+    logger.info('Virtual Try-On response missing image data', {
       responseKeys: Object.keys(response.data || {})
     }, 'API_UTIL');
     return null;
@@ -500,7 +547,7 @@ const generateSingleOutfit = async (
       if (retryAfterHeader) {
         // Use the server's suggested retry time (convert seconds to milliseconds)
         backoffDelay = parseInt(retryAfterHeader, 10) * 1000;
-        logger.warn(`Rate limited, server suggests retry after ${retryAfterHeader}s`, {
+        logger.info(`Rate limited, server suggests retry after ${retryAfterHeader}s`, {
           retryCount: retryCount + 1,
           maxRetries,
           status,
@@ -509,7 +556,7 @@ const generateSingleOutfit = async (
       } else {
         // Exponential backoff with longer delays: 10s, 20s, 40s
         backoffDelay = Math.pow(2, retryCount) * 10000;
-        logger.warn(`Rate limited, retrying after ${backoffDelay/1000}s`, {
+        logger.info(`Rate limited, retrying after ${backoffDelay/1000}s`, {
           retryCount: retryCount + 1,
           maxRetries,
           status,
@@ -527,7 +574,7 @@ const generateSingleOutfit = async (
         status: statusCode,
       }, 'API_UTIL');
     } else {
-      logger.warn('Failed to generate single outfit', {
+      logger.info('Failed to generate single outfit', {
         error: error.message,
         status: status || statusCode,
         retryCount,
@@ -590,7 +637,7 @@ Make it specific and actionable. Format as a clear, concise description suitable
     }
     return null;
   } catch (error: any) {
-    logger.warn('Failed to generate text outfit description', {
+    logger.info('Failed to generate text outfit description', {
       error: error.message,
       status: error.response?.status,
     }, 'API_UTIL');
@@ -625,9 +672,10 @@ const getDefaultWardrobe = (): {
 const generateDalleImage = async (prompt: string, userPicBase64?: string): Promise<string | null> => {
   logger.info('🎨 Starting DALL-E image generation', {
     promptLength: prompt.length,
-    promptPreview: prompt.substring(0, 100) + '...',
+    promptPreview: prompt.substring(0, 200) + '...',
     hasUserPhoto: !!userPicBase64,
-    photoSize: userPicBase64 ? `${(userPicBase64.length / 1024).toFixed(2)}KB` : 'N/A'
+    photoSize: userPicBase64 ? `${(userPicBase64.length / 1024).toFixed(2)}KB` : 'N/A',
+    promptContainsUserDetails: prompt.includes('EXACT SAME PERSON') || prompt.includes('reference photo')
   }, 'API_UTIL');
 
   try {
@@ -667,17 +715,27 @@ const generateDalleImage = async (prompt: string, userPicBase64?: string): Promi
       const imageSize = response.data[0].b64_json.length;
       const imageDataUrl = `data:image/png;base64,${response.data[0].b64_json}`;
       
+      // Validate the generated image
+      if (!imageDataUrl.startsWith('data:image/')) {
+        logger.error('❌ Generated image data URL is invalid', {
+          dataUrlPrefix: imageDataUrl.substring(0, 20)
+        }, 'API_UTIL');
+        return null;
+      }
+      
       logger.info('✅ DALL-E image generated successfully', {
         imageSize: `${(imageSize / 1024).toFixed(2)}KB`,
         imageSizeBytes: imageSize,
         duration: `${duration}ms`,
-        dataUrlLength: imageDataUrl.length
+        dataUrlLength: imageDataUrl.length,
+        isValidFormat: imageDataUrl.startsWith('data:image/png;base64,'),
+        preview: imageDataUrl.substring(0, 50) + '...'
       }, 'API_UTIL');
       
       return imageDataUrl;
     }
 
-    logger.warn('⚠️ DALL-E response missing image data', {
+    logger.info('⚠️ DALL-E response missing image data', {
       hasResponse: !!response,
       hasData: !!response.data,
       dataLength: response.data?.length || 0,
@@ -727,17 +785,17 @@ export const getOutfitSuggestions = async (userInfo: {
 
   try {
     // Check if OpenAI is configured (primary method)
-    logger.debug('Checking OpenAI configuration', null, 'API_UTIL');
+    logger.info('Checking OpenAI configuration', null, 'API_UTIL');
     const openaiClientInstance = getOpenAIClient();
     if (!openaiClientInstance) {
-      logger.warn('⚠️ OpenAI not configured, OPENAI_API_KEY required for image generation', null, 'API_UTIL');
-      logger.warn('Please add OPENAI_API_KEY to your .env file', null, 'API_UTIL');
+      logger.info('⚠️ OpenAI not configured, OPENAI_API_KEY required for image generation', null, 'API_UTIL');
+      logger.info('Please add OPENAI_API_KEY to your .env file', null, 'API_UTIL');
     } else {
       logger.info('✅ OpenAI client available for image generation', null, 'API_UTIL');
     }
     
     const apiKey = process.env.GEMINI_API_KEY; // For fallback text descriptions only
-    logger.debug('Checking Gemini API key for fallback', {
+    logger.info('Checking Gemini API key for fallback', {
       hasGeminiKey: !!apiKey,
       geminiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'N/A'
     }, 'API_UTIL');
@@ -755,35 +813,53 @@ export const getOutfitSuggestions = async (userInfo: {
     // Prepare base64 image data if available
     let userPicBase64: string | undefined;
     if (userInfo.userPic) {
+      // Validate and normalize the image data
+      const originalLength = userInfo.userPic.length;
       userPicBase64 = userInfo.userPic.startsWith('data:image/')
         ? userInfo.userPic
         : `data:image/jpeg;base64,${userInfo.userPic}`;
+      
+      logger.info('✅ User photo prepared for processing', {
+        originalLength,
+        normalizedLength: userPicBase64.length,
+        hasDataPrefix: userPicBase64.startsWith('data:image/'),
+        photoSize: `${(userPicBase64.length / 1024).toFixed(2)}KB`,
+        preview: userPicBase64.substring(0, 50) + '...'
+      }, 'API_UTIL');
+    } else {
+      logger.info('ℹ️ No user photo provided', null, 'API_UTIL');
     }
 
     // Generate outfit suggestions
     // Note: Gemini API free tier has very strict rate limits (often 1 request per minute)
     // Generating just 1 outfit to minimize rate limit issues
-    const styleVariants = [
-      'Casual everyday outfit'
-    ];
+    const styleVariants: string[] = [];
     
     const wardrobe: Array<{ image: string }> = [];
 
-    // If user has a photo, use Virtual Try-On API to show them wearing the outfit
+    // PRIORITY: If user has a photo, ALWAYS try Virtual Try-On first (this is the ONLY way to use the actual user photo)
     // Strategy: Generate outfit design image first, then use it as product image for virtual try-on
     if (userPicBase64) {
-      logger.info('👤 User has photo - will use Virtual Try-On to show them wearing the outfit', {
-        photoSize: `${(userPicBase64.length / 1024).toFixed(2)}KB`
+      logger.info('👤 User has photo - PRIORITIZING Virtual Try-On to show them wearing the outfit', {
+        photoSize: `${(userPicBase64.length / 1024).toFixed(2)}KB`,
+        hasVirtualTryOnToken: !!VIRTUAL_TRY_ON_ACCESS_TOKEN
       }, 'API_UTIL');
+
+      // Check if Virtual Try-On is available
+      if (!VIRTUAL_TRY_ON_ACCESS_TOKEN) {
+        logger.info('⚠️ Virtual Try-On token not configured - DALL-E cannot use images directly, so results may not match user photo', {
+          warning: 'For best results, configure VIRTUAL_TRY_ON_ACCESS_TOKEN to use the actual user photo'
+        }, 'API_UTIL');
+      }
 
       try {
         // Step 1: Generate outfit design image using DALL-E (this will be our "product" image)
         const dalleClient = getOpenAIClient();
         if (dalleClient) {
-          logger.info('🎨 Step 1: Generating outfit design with DALL-E', null, 'API_UTIL');
+          logger.info('🎨 Step 1: Generating outfit design with DALL-E for Virtual Try-On', null, 'API_UTIL');
           
-          // Build prompt for outfit design (just the clothing, no person)
-          const outfitDesignPrompt = await buildOutfitDesignPrompt(userInfo, styleVariants[0]);
+          // Build prompt for outfit design (just the clothing, no person) - personalized to user's body type and style
+          const outfitDesignPrompt = await buildOutfitDesignPrompt(userInfo, styleVariants[0] || undefined);
           
           const outfitImage = await generateDalleImage(outfitDesignPrompt);
           
@@ -792,23 +868,31 @@ export const getOutfitSuggestions = async (userInfo: {
               outfitImageSize: `${(outfitImage.length / 1024).toFixed(2)}KB`
             }, 'API_UTIL');
 
-            // Step 2: Use Virtual Try-On to show user wearing the outfit
-            logger.info('👔 Step 2: Using Virtual Try-On to show user wearing the outfit', null, 'API_UTIL');
+            // Step 2: Use Virtual Try-On to show user wearing the outfit (THIS USES THE ACTUAL USER PHOTO)
+            logger.info('👔 Step 2: Using Virtual Try-On API with user photo', {
+              userPhotoSize: `${(userPicBase64.length / 1024).toFixed(2)}KB`,
+              outfitImageSize: `${(outfitImage.length / 1024).toFixed(2)}KB`
+            }, 'API_UTIL');
             
             const tryOnResult = await generateVirtualTryOn(userPicBase64, [outfitImage]);
             
             if (tryOnResult) {
               wardrobe.push({ image: tryOnResult });
               logger.info('✅ Virtual Try-On successful - user can see themselves wearing the outfit!', {
-                imageSize: `${(tryOnResult.length / 1024).toFixed(2)}KB`
+                imageSize: `${(tryOnResult.length / 1024).toFixed(2)}KB`,
+                note: 'This image shows the ACTUAL user from their uploaded photo wearing the suggested outfit'
               }, 'API_UTIL');
+              // Virtual Try-On succeeded - we're done, don't fall through to DALL-E generation
+              // Return early with the Virtual Try-On result
             } else {
-              logger.warn('⚠️ Virtual Try-On failed, falling back to generated outfit image', null, 'API_UTIL');
-              // Fallback: Use the generated outfit image directly
-              wardrobe.push({ image: outfitImage });
+              logger.info('⚠️ Virtual Try-On failed or not available - falling back to DALL-E with enhanced prompt', {
+                reason: !VIRTUAL_TRY_ON_ACCESS_TOKEN ? 'No access token configured' : 'Virtual Try-On API returned no result',
+                note: 'DALL-E will use text description of user from photo analysis, but cannot use the actual image'
+              }, 'API_UTIL');
+              // Don't add outfitImage here - let it fall through to DALL-E generation with user photo context
             }
           } else {
-            logger.warn('⚠️ Failed to generate outfit design, will try direct generation', null, 'API_UTIL');
+            logger.info('⚠️ Failed to generate outfit design, will try direct DALL-E generation with user photo context', null, 'API_UTIL');
           }
         }
       } catch (error: any) {
@@ -816,25 +900,30 @@ export const getOutfitSuggestions = async (userInfo: {
           error: error.message,
           stack: error.stack?.substring(0, 300)
         }, 'API_UTIL');
-        // Continue to fallback methods below
+        // Continue to fallback methods below - DALL-E with enhanced prompt
       }
     }
 
-    // If Virtual Try-On wasn't used (no user photo or it failed), generate outfit directly
-    // Use OpenAI DALL-E for image generation (primary method)
-    logger.info('🎯 Attempting image generation with DALL-E', {
-      style: styleVariants[0],
-      totalStyles: styleVariants.length
-    }, 'API_UTIL');
+    // If Virtual Try-On wasn't used or failed, generate outfit with DALL-E
+    // NOTE: DALL-E 3 cannot use images directly - it only works with text prompts
+    // If user has photo, we use Vision API to analyze it and create a detailed text description
+    // This is a fallback - Virtual Try-On is preferred as it uses the actual user photo
+    if (wardrobe.length === 0) {
+      logger.info('🎯 Attempting DALL-E image generation', {
+        style: styleVariants[0] || 'default',
+        totalStyles: styleVariants.length,
+        hasUserPhoto: !!userPicBase64,
+        note: userPicBase64 ? 'Using Vision API analysis of user photo to create detailed prompt (DALL-E cannot use images directly)' : 'No user photo - generating generic outfit'
+      }, 'API_UTIL');
 
-    const dalleClient = getOpenAIClient();
+      const dalleClient = getOpenAIClient();
     if (!dalleClient) {
-      logger.warn('⚠️ OpenAI client not available, OPENAI_API_KEY not set or invalid', null, 'API_UTIL');
-      logger.warn('Skipping DALL-E generation, will try fallback methods', null, 'API_UTIL');
+      logger.info('⚠️ OpenAI client not available, OPENAI_API_KEY not set or invalid', null, 'API_UTIL');
+      logger.info('Skipping DALL-E generation, will try fallback methods', null, 'API_UTIL');
     } else {
       try {
         logger.info('📝 Building outfit prompt', {
-          style: styleVariants[0],
+          style: styleVariants[0] || 'default',
           userInfo: {
             gender: userInfo.gender,
             bodyType: userInfo.bodyType,
@@ -844,14 +933,18 @@ export const getOutfitSuggestions = async (userInfo: {
           }
         }, 'API_UTIL');
 
-        // Build prompt with user photo context (async - may use Vision API)
+        // Build prompt with user photo context (async - uses Vision API to analyze photo)
+        // IMPORTANT: DALL-E cannot use images directly, so we analyze the photo with Vision API
+        // and create a very detailed text description that DALL-E can use
         const prompt = await buildOutfitPrompt({
           ...userInfo,
           userPic: userPicBase64
-        }, styleVariants[0]);
-        logger.debug('Generated prompt', {
+        }, styleVariants[0] || undefined);
+        logger.info('Generated DALL-E prompt', {
           promptLength: prompt.length,
-          promptPreview: prompt.substring(0, 150) + '...'
+          hasUserPhotoContext: !!userPicBase64,
+          containsUserDetails: prompt.includes('EXACT SAME PERSON') || prompt.includes('reference photo'),
+          promptPreview: prompt.substring(0, 500) + '...'
         }, 'API_UTIL');
         
         logger.info('🔄 Calling DALL-E image generation', {
@@ -867,7 +960,7 @@ export const getOutfitSuggestions = async (userInfo: {
             wardrobeCount: wardrobe.length
           }, 'API_UTIL');
         } else {
-          logger.warn('⚠️ DALL-E did not return an image, will try fallback', null, 'API_UTIL');
+          logger.info('⚠️ DALL-E did not return an image, will try fallback', null, 'API_UTIL');
         }
       } catch (error: any) {
         logger.error('❌ DALL-E generation failed with exception', {
@@ -879,10 +972,11 @@ export const getOutfitSuggestions = async (userInfo: {
         }, 'API_UTIL');
       }
     }
+    }
 
     // If image generation failed, try text-based fallback (using Gemini text model)
     if (wardrobe.length === 0) {
-      logger.warn('⚠️ No images generated, attempting text-based fallback', {
+      logger.info('⚠️ No images generated, attempting text-based fallback', {
         wardrobeCount: wardrobe.length,
         hasGeminiKey: !!apiKey
       }, 'API_UTIL');
@@ -906,7 +1000,7 @@ export const getOutfitSuggestions = async (userInfo: {
               wardrobe: [] // Empty wardrobe since we have text description instead
             };
           } else {
-            logger.warn('⚠️ Gemini text model did not return description', null, 'API_UTIL');
+            logger.info('⚠️ Gemini text model did not return description', null, 'API_UTIL');
           }
         } catch (error: any) {
           logger.error('❌ Text-based fallback also failed', { 
@@ -915,11 +1009,11 @@ export const getOutfitSuggestions = async (userInfo: {
           }, 'API_UTIL');
         }
       } else {
-        logger.warn('⚠️ No Gemini API key available for text fallback', null, 'API_UTIL');
+        logger.info('⚠️ No Gemini API key available for text fallback', null, 'API_UTIL');
       }
       
-      logger.warn('⚠️ No outfits generated, returning default suggestions', {
-        triedDalle: !!dalleClient,
+      logger.info('⚠️ No outfits generated, returning default suggestions', {
+        triedDalle: !!openaiClientInstance,
         triedGemini: !!apiKey,
         wardrobeCount: wardrobe.length
       }, 'API_UTIL');
@@ -957,7 +1051,7 @@ export const getOutfitSuggestions = async (userInfo: {
       stack: error.stack?.substring(0, 400)
     }, 'API_UTIL');
     
-    logger.warn('⚠️ Returning default wardrobe due to error', null, 'API_UTIL');
+    logger.info('⚠️ Returning default wardrobe due to error', null, 'API_UTIL');
     // Return default response if API call fails
     return getDefaultWardrobe();
   }
