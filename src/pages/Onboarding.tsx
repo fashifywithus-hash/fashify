@@ -89,9 +89,14 @@ const Onboarding = () => {
     setIsSaving(true);
 
     try {
-      // For now, we'll skip photo upload and just save the profile data
-      // Photo upload can be added later with Supabase Storage
-      const { error } = await supabase.from("profiles").upsert({
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const profileData = {
         user_id: user.id,
         name: data.name,
         gender: data.gender,
@@ -102,7 +107,19 @@ const Onboarding = () => {
         skin_tone: data.skinTone,
         preferred_styles: data.styles,
         photo_url: null, // Will implement photo upload later
-      });
+      };
+
+      let error;
+      if (existingProfile) {
+        // Update existing profile
+        ({ error } = await supabase
+          .from("profiles")
+          .update(profileData)
+          .eq("user_id", user.id));
+      } else {
+        // Insert new profile
+        ({ error } = await supabase.from("profiles").insert(profileData));
+      }
 
       if (error) throw error;
 
