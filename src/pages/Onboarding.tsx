@@ -128,7 +128,7 @@ const Onboarding = () => {
         description: "Your preferences have been saved successfully.",
       });
 
-      navigate("/suggestions");
+      navigate("/selection");
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({

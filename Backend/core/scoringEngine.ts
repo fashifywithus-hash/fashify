@@ -1,5 +1,6 @@
 /**
  * Scoring Engine for matching user preferences with inventory items
+ * BACKEND LOGIC - Core scoring algorithm
  */
 
 import type { InventoryItem, UserPreferences, ScoredItem } from "@/types/inventory";

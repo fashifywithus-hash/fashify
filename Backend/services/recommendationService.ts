@@ -1,9 +1,10 @@
 /**
  * Recommendation Service - Main service for getting outfit recommendations
+ * BACKEND LOGIC - Orchestrates scoring and item selection
  */
 
-import { loadInventoryFromCSV } from "@/lib/csvParser";
-import { ScoringEngine } from "@/lib/scoringEngine";
+import { loadInventoryFromCSV } from "../core/csvParser";
+import { ScoringEngine } from "../core/scoringEngine";
 import type { UserPreferences, RecommendationResult, InventoryItem } from "@/types/inventory";
 
 class RecommendationService {

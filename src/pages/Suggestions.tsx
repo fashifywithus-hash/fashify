@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Settings, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { recommendationService } from "@/services/recommendationService";
+import { recommendationService } from "@backend/services/recommendationService";
 import type { UserPreferences, RecommendationResult } from "@/types/inventory";
 import { CategorySection } from "@/components/recommendations/CategorySection";
 import { useToast } from "@/hooks/use-toast";

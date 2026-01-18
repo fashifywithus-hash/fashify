@@ -1,5 +1,6 @@
 /**
  * CSV Parser utility to load and parse inventory data
+ * BACKEND LOGIC - Data parsing and loading
  */
 
 import type { InventoryItem } from "@/types/inventory";
