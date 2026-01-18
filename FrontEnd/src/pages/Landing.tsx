@@ -1,20 +1,35 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Landing = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <span className="font-display text-2xl font-semibold">Fashify</span>
-          <Link to="/login">
-            <Button variant="ghost" className="font-medium">
-              Login
+          {user ? (
+            <Button variant="ghost" className="font-medium" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
             </Button>
-          </Link>
+          ) : (
+            <Link to="/login">
+              <Button variant="ghost" className="font-medium">
+                Login
+              </Button>
+            </Link>
+          )}
         </div>
       </nav>
 

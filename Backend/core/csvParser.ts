@@ -3,7 +3,9 @@
  * BACKEND LOGIC - Data parsing and loading
  */
 
-import type { InventoryItem } from "@/types/inventory";
+import fs from "fs";
+import path from "path";
+import type { InventoryItem } from "../src/types/inventory";
 
 /**
  * Parse CSV content into InventoryItem array
@@ -197,22 +199,49 @@ function normalizeStyleTag(tag: string): string {
 
 /**
  * Load inventory from CSV file
+ * Uses Node.js file system to read the CSV file
  */
 export async function loadInventoryFromCSV(): Promise<InventoryItem[]> {
   try {
-    // Try public folder first, then Backend folder
-    let response = await fetch("/Backend/Item-attributes.csv");
-    if (!response.ok) {
-      response = await fetch("/public/Backend/Item-attributes.csv");
-    }
-    if (!response.ok) {
-      throw new Error(`Failed to load inventory: ${response.statusText}`);
+    // Get the path to the CSV file
+    // The CSV file is in the BackEnd directory root
+    // Try multiple possible locations:
+    // 1. Relative to current file (BackEnd/core/ -> BackEnd/)
+    // 2. From process.cwd() (should be BackEnd/ when running npm run dev)
+    // 3. From project root (if running from different location)
+    
+    const possiblePaths = [
+      path.join(__dirname, "..", "Item-attributes.csv"), // From core/ to BackEnd/
+      path.resolve(process.cwd(), "Item-attributes.csv"), // From current working directory
+      path.resolve(__dirname, "..", "..", "BackEnd", "Item-attributes.csv"), // From project root
+    ];
+    
+    let csvPath: string | null = null;
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        csvPath = possiblePath;
+        break;
+      }
     }
     
-    const csvContent = await response.text();
+    if (!csvPath) {
+      throw new Error(`CSV file not found. Tried: ${possiblePaths.join(", ")}`);
+    }
+    
+    // Check if file exists
+    if (!fs.existsSync(csvPath)) {
+      throw new Error(`CSV file not found at: ${csvPath}`);
+    }
+    
+    // Read the CSV file using Node.js file system
+    const csvContent = fs.readFileSync(csvPath, "utf-8");
+    
+    console.log(`📄 Loading inventory from: ${csvPath}`);
+    console.log(`📄 File size: ${(csvContent.length / 1024).toFixed(2)} KB`);
+    
     return parseInventoryCSV(csvContent);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error loading inventory CSV:", error);
-    throw error;
+    throw new Error(`Failed to load inventory data: ${error.message}`);
   }
 }

@@ -2,17 +2,17 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Settings, Loader2, AlertCircle } from "lucide-react";
+import { RefreshCw, Settings, Loader2, AlertCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { recommendationService } from "@backend/services/recommendationService";
-import type { UserPreferences, RecommendationResult } from "@/types/inventory";
+import { profileService } from "@/services/profileService";
+import { recommendationService } from "@/services/recommendationService";
+import type { RecommendationResult } from "@/types/inventory";
 import { CategorySection } from "@/components/recommendations/CategorySection";
 import { useToast } from "@/hooks/use-toast";
 
 const Suggestions = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
@@ -36,33 +36,18 @@ const Suggestions = () => {
     setError(null);
 
     try {
-      // Fetch user profile from Supabase
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      // Fetch user profile from backend API
+      const profile = await profileService.getProfile();
 
-      if (profileError) throw profileError;
       if (!profile) {
         navigate("/onboarding");
         return;
       }
 
-      // Convert profile to UserPreferences format
-      const preferences: UserPreferences = {
-        gender: profile.gender || "male",
-        weather: profile.weather_preference || 50,
-        lifestyle: profile.lifestyle || "casual",
-        bodyType: profile.body_type || "average",
-        height: profile.height || 170,
-        skinTone: profile.skin_tone || 50,
-        styles: profile.preferred_styles || [],
-      };
-
-      // Get recommendations
-      console.log("Loading recommendations with preferences:", preferences);
-      const result = await recommendationService.getRecommendations(preferences);
+      // Get recommendations from backend API
+      // Backend automatically uses the user's saved profile from the auth token
+      console.log("Loading recommendations from backend API...");
+      const result = await recommendationService.getRecommendations();
       console.log("Recommendations result:", result);
       setRecommendations(result);
     } catch (err: any) {
@@ -85,6 +70,11 @@ const Suggestions = () => {
 
   const handleEditPreferences = () => {
     navigate("/onboarding");
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
   };
 
   if (authLoading || loading) {
@@ -150,6 +140,15 @@ const Suggestions = () => {
             >
               <Settings className="w-4 h-4 mr-2" />
               Edit preferences
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
             </Button>
           </div>
         </div>

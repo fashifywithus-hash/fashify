@@ -12,9 +12,10 @@ import { SkinToneStep } from "@/components/onboarding/steps/SkinToneStep";
 import { StyleStep } from "@/components/onboarding/steps/StyleStep";
 import { PhotoUploadStep } from "@/components/onboarding/steps/PhotoUploadStep";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { profileService } from "@/services/profileService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { fileToDataURL } from "@/utils/imageUtils";
 
 interface OnboardingData {
   name: string;
@@ -25,7 +26,8 @@ interface OnboardingData {
   height: number;
   skinTone: number;
   styles: string[];
-  photo: File | null;
+  photo: File | null; // File object for preview
+  photoUrl: string | null; // Base64 data URL for storage
 }
 
 const TOTAL_STEPS = 9;
@@ -46,6 +48,7 @@ const Onboarding = () => {
     skinTone: 50,
     styles: [],
     photo: null,
+    photoUrl: null,
   });
 
   useEffect(() => {
@@ -53,6 +56,22 @@ const Onboarding = () => {
       navigate("/login");
     }
   }, [user, authLoading, navigate]);
+
+  // Convert photo to base64 when it's uploaded
+  useEffect(() => {
+    if (data.photo && data.photo instanceof File && !data.photoUrl) {
+      console.log("🔄 Auto-converting photo to base64...");
+      fileToDataURL(data.photo)
+        .then((photoUrl) => {
+          console.log("✅ Photo auto-converted, length:", photoUrl.length);
+          setData((prev) => ({ ...prev, photoUrl }));
+        })
+        .catch((error) => {
+          console.error("❌ Error auto-converting photo:", error);
+          setData((prev) => ({ ...prev, photoUrl: null }));
+        });
+    }
+  }, [data.photo]);
 
   const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
@@ -77,7 +96,7 @@ const Onboarding = () => {
       case 8:
         return data.styles.length > 0;
       case 9:
-        return data.photo !== null;
+        return data.photo !== null || data.photoUrl !== null;
       default:
         return false;
     }
@@ -89,15 +108,35 @@ const Onboarding = () => {
     setIsSaving(true);
 
     try {
-      // Check if profile already exists
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Use the pre-converted photoUrl if available, otherwise try to convert
+      let photoUrl: string | null = data.photoUrl;
+      
+      // If we have a photo but no photoUrl, convert it now
+      if (!photoUrl && data.photo && data.photo instanceof File) {
+        try {
+          console.log("🔄 Converting photo to base64 on save...", {
+            name: data.photo.name,
+            size: data.photo.size
+          });
+          photoUrl = await fileToDataURL(data.photo);
+          console.log("✅ Photo converted, length:", photoUrl.length);
+        } catch (error) {
+          console.error("❌ Error converting photo:", error);
+          toast({
+            title: "Photo conversion error",
+            description: "Could not process the photo. Saving profile without photo.",
+            variant: "destructive",
+          });
+        }
+      }
 
-      const profileData = {
-        user_id: user.id,
+      console.log("📤 Photo URL status:", {
+        hasPhotoFile: !!data.photo,
+        hasPhotoUrl: !!photoUrl,
+        photoUrlLength: photoUrl?.length || 0
+      });
+
+      const profileData: any = {
         name: data.name,
         gender: data.gender,
         weather_preference: data.weather,
@@ -106,22 +145,15 @@ const Onboarding = () => {
         height: data.height,
         skin_tone: data.skinTone,
         preferred_styles: data.styles,
-        photo_url: null, // Will implement photo upload later
+        photo_url: photoUrl, // Include photo_url (can be null)
       };
 
-      let error;
-      if (existingProfile) {
-        // Update existing profile
-        ({ error } = await supabase
-          .from("profiles")
-          .update(profileData)
-          .eq("user_id", user.id));
-      } else {
-        // Insert new profile
-        ({ error } = await supabase.from("profiles").insert(profileData));
-      }
-
-      if (error) throw error;
+      console.log("📤 Sending profile data to backend:", {
+        ...profileData,
+        photo_url: photoUrl ? `[base64 data, ${photoUrl.length} chars]` : null
+      });
+      
+      await profileService.saveProfile(profileData);
 
       toast({
         title: "Profile saved!",
@@ -133,7 +165,7 @@ const Onboarding = () => {
       console.error("Error saving profile:", error);
       toast({
         title: "Error saving profile",
-        description: error.message || "Please try again.",
+        description: error.error || error.message || "Please try again.",
         variant: "destructive",
       });
     } finally {

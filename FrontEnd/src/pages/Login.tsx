@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { profileService } from "@/services/profileService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,13 +19,9 @@ const Login = () => {
     const checkProfile = async () => {
       if (user) {
         // Check if user has a profile
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        const hasProfile = await profileService.hasProfile();
 
-        if (profile) {
+        if (hasProfile) {
           navigate("/suggestions");
         } else {
           navigate("/onboarding");

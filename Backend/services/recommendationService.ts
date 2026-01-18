@@ -5,7 +5,7 @@
 
 import { loadInventoryFromCSV } from "../core/csvParser";
 import { ScoringEngine } from "../core/scoringEngine";
-import type { UserPreferences, RecommendationResult, InventoryItem } from "@/types/inventory";
+import type { UserPreferences, RecommendationResult, InventoryItem } from "../src/types/inventory";
 
 class RecommendationService {
   private inventory: InventoryItem[] | null = null;

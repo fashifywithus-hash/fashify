@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
@@ -23,6 +25,13 @@ export const OnboardingLayout = ({
   onBack,
   continueLabel = "Continue",
 }: OnboardingLayoutProps) => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -40,7 +49,15 @@ export const OnboardingLayout = ({
             <span className="font-display text-xl font-semibold">Fashify</span>
           </div>
           <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-          <div className="w-20" /> {/* Spacer for balance */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={handleSignOut}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign out
+          </Button>
         </div>
       </header>
 

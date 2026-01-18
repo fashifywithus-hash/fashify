@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { recommendationService } from "@backend/services/recommendationService";
-import type { UserPreferences, ScoredItem, RecommendationResult } from "@/types/inventory";
+import { profileService } from "@/services/profileService";
+import { recommendationService } from "@/services/recommendationService";
+import type { ScoredItem, RecommendationResult } from "@/types/inventory";
 import { SelectableImageCard } from "@/components/selection/SelectableImageCard";
 import { Loader2 } from "lucide-react";
 
@@ -51,7 +51,7 @@ type Selections = Record<CategoryKey, Set<string>>;
 
 const ItemSelection = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState<string>("");
   const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
@@ -82,13 +82,8 @@ const ItemSelection = () => {
 
     try {
       // Fetch user profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      const profile = await profileService.getProfile();
 
-      if (profileError) throw profileError;
       if (!profile) {
         navigate("/onboarding");
         return;
@@ -96,19 +91,9 @@ const ItemSelection = () => {
 
       setUserName(profile.name || "");
 
-      // Convert profile to UserPreferences
-      const preferences: UserPreferences = {
-        gender: profile.gender || "male",
-        weather: profile.weather_preference || 50,
-        lifestyle: profile.lifestyle || "casual",
-        bodyType: profile.body_type || "average",
-        height: profile.height || 170,
-        skinTone: profile.skin_tone || 50,
-        styles: profile.preferred_styles || [],
-      };
-
-      // Get recommendations from backend
-      const result = await recommendationService.getRecommendations(preferences);
+      // Get recommendations from backend API
+      // Backend automatically uses the user's saved profile from the auth token
+      const result = await recommendationService.getRecommendations();
       setRecommendations(result);
     } catch (error: any) {
       console.error("Error loading data:", error);
@@ -157,6 +142,11 @@ const ItemSelection = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -197,8 +187,19 @@ const ItemSelection = () => {
             )}
             <span className="font-display text-xl font-semibold">Fashify</span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {currentCategoryIndex + 1} / {CATEGORIES.length}
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              {currentCategoryIndex + 1} / {CATEGORIES.length}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
+            </Button>
           </div>
         </div>
       </header>

@@ -12,12 +12,20 @@ export const PhotoUploadStep = ({ value, onChange }: PhotoUploadStepProps) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log("📸 Photo selected:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        isFile: file instanceof File
+      });
       onChange(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else {
+      console.log("⚠️ No file selected");
     }
   };
 
