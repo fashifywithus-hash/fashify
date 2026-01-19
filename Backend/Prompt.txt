@@ -14,7 +14,6 @@ for this it should use this endpoint
 -------------------------------------------------------
 curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
 --header 'Content-Type: application/json' \
---header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
 --data '{
     "contents": [
         {
@@ -135,7 +134,6 @@ for each combination (4 items) execute workflow 2 and workflow 3
 2. second part of workflow
 
 curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash-image:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
---header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
 --header 'Content-Type: application/json' \
 --data '{
     "contents": [
