@@ -14,7 +14,7 @@ for this it should use this endpoint
 -------------------------------------------------------
 curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
 --header 'Content-Type: application/json' \
---header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
+--header 'Authorization: Bearer ya29.a0AUMWg_JPtA08ppu3QYWaWSiVLfTIqNKUPKwA82r0d7ZyIIZxDKSeQ6TCCk5wQFFQqNw4RI61dDzRRdsLjIhSvWd5FPpMH-m4WgeuyhiTX3ilkwByGclsHuG1VnnhmjI2yVS0sN8lFA_nH2G-JIadfZ864TkMZUYw5eWwr59T8aFB63g5PY3hp0YFeR_OjrqXPdoFIn3LM2v8hgaCgYKAQASARMSFQHGX2MiolTDcL2XgkxOdenXiV8Jtg0213' \
 --data '{
     "contents": [
         {
