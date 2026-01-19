@@ -1,0 +1,302 @@
+i'm now planning to enhance the features in this service
+so basically after /api/recommendations call
+we will get 4 items from each category
+post that there is some code is already written to select atleast two items from each category (check it once)
+now with at max 4 selected items from each category we will make further call to backend to serve it for new page
+below are the details of new page and also the api endpoint that you need to implement
+maybe you can use styleID for uniqely identifying the data
+api endpoint detail:
+this api basically do execute three  parts of workflows
+1. Analyze this person's skin tone and body shape from Image
+   From the provided inventory, select the 12 best full-outfit combinations. Each combination must include a Shirt ID, Bottom ID, Jacket ID, and Shoe ID. Return the result as a JSON array of objects."
+id means styleID
+for this it should use this endpoint
+-------------------------------------------------------
+curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
+--data '{
+    "contents": [
+        {
+            "role": "user",
+            "parts": [
+                {
+                    "inlineData": {
+                        "mimeType": "image/jpeg",
+                        "data": "BASE64_IMAGE"
+                    }
+                },
+                {
+                    "text": "Act as an AI Stylist. 1. Analyze my photo. 2. Select 12 outfits from the inventory using the styleId. Requirements: Each outfit must have a Top, Bottom, Jacket, and Shoes. Output JSON only."
+                },
+                {
+                    "text": "Inventory Data [styleId, Sub_Category, Color, Style_Tag]:\n35888507, Shirt, Off White, Trendy\n25942874, Shirt, Light Blue, Classic\n26146744, Jacket, Steel Blue, Minimal\n33570152, Puffer Jacket, Teal, Streetwear\n25756782, Jeans, Navy Blue, Classic\n30195759, Cargo Pants, Off White, Streetwear\n33026384, Sneakers, Black, Athletic\n37666546, Sneakers, White, Trendy"
+                }
+            ]
+        }
+    ],
+    "generationConfig": {
+        "responseMimeType": "application/json",
+        "responseSchema": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "top_id": {
+                        "type": "STRING",
+                        "description": "The styleId of the inner top"
+                    },
+                    "bottom_id": {
+                        "type": "STRING",
+                        "description": "The styleId of the pants"
+                    },
+                    "jacket_id": {
+                        "type": "STRING",
+                        "description": "The styleId of the outerwear"
+                    },
+                    "shoe_id": {
+                        "type": "STRING",
+                        "description": "The styleId of the footwear"
+                    },
+                    "reasoning": {
+                        "type": "STRING",
+                        "description": "Brief explanation of why these items work for the user'\''s skin tone and body shape."
+                    }
+                },
+                "required": [
+                    "top_id",
+                    "bottom_id",
+                    "jacket_id",
+                    "shoe_id",
+                    "reasoning"
+                ]
+            }
+        }
+    }
+}'
+-------------------------------------------------------
+for inventroy use this csv file Backend/Item-attributes.csv and add base64 image of user
+
+response of this endpoint will be like this
+{
+    "candidates": [
+        {
+            "content": {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "[\n  {\n    \"top_id\": \"35888507\",\n    \"bottom_id\": \"25756782\",\n    \"jacket_id\": \"26146744\",\n    \"shoe_id\": \"37666546\",\n    \"reasoning\": \"A fresh and clean look. The off-white shirt brightens your warm skin tone, paired with classic navy jeans. The steel blue jacket adds a cool contrast without being overwhelming, and white sneakers keep it modern and casual. The relaxed fit will suit your build.\"\n  },\n  {\n    \"top_id\": \"35888507\",\n    \"bottom_id\": \"30195759\",\n    \"jacket_id\": \"33570152\",\n    \"shoe_id\": \"33026384\",\n    \"reasoning\": \"A monochromatic base of off-white creates an elongated look for your body shape. The teal puffer jacket adds a vibrant streetwear element and a pop of color, while black athletic sneakers ground the outfit with comfort.\"\n  },\n  {\n    \"top_id\": \"25942874\",\n    \"bottom_id\": \"25756782\",\n    \"jacket_id\": \"26146744\",\n    \"shoe_id\": \"33026384\",\n    \"reasoning\": \"The light blue shirt complements your warm skin tone. Paired with classic navy jeans and a steel blue jacket, it creates a harmonious cool-toned ensemble. Black sneakers provide a sleek finish, suitable for your average build.\"\n  },\n  {\n    \"top_id\": \"25942874\",\n    \"bottom_id\": \"30195759\",\n    \"jacket_id\": \"33570152\",\n    \"shoe_id\": \"37666546\",\n    \"reasoning\": \"The light blue top provides a soft contrast to the off-white cargo pants, offering a relaxed and modern urban vibe. The teal puffer jacket adds warmth and a streetwear edge, perfectly balanced by trendy white sneakers. This combination suits your build by maintaining a comfortable silhouette.\"\n  },\n  {\n    \"top_id\": \"35888507\",\n    \"bottom_id\": \"25756782\",\n    \"jacket_id\": \"33570152\",\n    \"shoe_id\": \"33026384\",\n    \"reasoning\": \"The off-white shirt is a versatile base that brightens your complexion. Navy jeans offer a classic foundation. The teal puffer jacket introduces a cool, vibrant tone that complements your warm skin and adds a dynamic, athletic silhouette that suits your build. Black sneakers keep the look grounded and practical.\"\n  },\n  {\n    \"top_id\": \"25942874\",\n    \"bottom_id\": \"25756782\",\n    \"jacket_id\": \"33570152\",\n    \"shoe_id\": \"37666546\",\n    \"reasoning\": \"A light blue shirt and navy jeans create a fresh and approachable look. The vibrant teal puffer jacket adds a sporty, trendy layer, while white sneakers maintain a clean, casual aesthetic. This outfit maintains good proportions for your body shape.\"\n  },\n  {\n    \"top_id\": \"25942874\",\n    \"bottom_id\": \"30195759\",\n    \"jacket_id\": \"26146744\",\n    \"shoe_id\": \"33026384\",\n    \"reasoning\": \"The light blue shirt and steel blue jacket create a cool, cohesive color scheme, which can beautifully contrast with your warm skin tone. Off-white cargo pants provide a light, comfortable base. Black athletic sneakers offer practicality and a subtle edge, suiting an average build.\"\n  },\n  {\n    \"top_id\": \"35888507\",\n    \"bottom_id\": \"30195759\",\n    \"jacket_id\": \"26146744\",\n    \"shoe_id\": \"37666546\",\n    \"reasoning\": \"This off-white monochrome foundation creates a clean, elongated canvas, suitable for an average build. The steel blue jacket provides a chic, minimalist contrast, enhancing the overall stylish yet comfortable streetwear vibe. Trendy white sneakers complete the contemporary aesthetic.\"\n  },\n  {\n    \"top_id\": \"35888507\",\n    \"bottom_id\": \"25756782\",\n    \"jacket_id\": \"26146744\",\n    \"shoe_id\": \"33026384\",\n    \"reasoning\": \"The off-white shirt offers a clean, bright base that complements your skin tone. Navy jeans provide a timeless, flattering bottom. The steel blue jacket adds a touch of modern minimalism, and black athletic sneakers complete a versatile look suitable for various casual occasions and your build.\"\n  },\n  {\n    \"top_id\": \"25942874\",\n    \"bottom_id\": \"30195759\",\n    \"jacket_id\": \"26146744\",\n    \"shoe_id\": \"37666546\",\n    \"reasoning\": \"The light blue shirt offers a refreshing contrast to your warm skin. Paired with off-white cargo pants, it creates a balanced and airy look. The steel blue jacket adds a sophisticated layer, while white sneakers maintain a trendy and comfortable finish, suitable for an athletic build.\"\n  }\n]"
+                    }
+                ]
+            },
+            "finishReason": "STOP",
+            "avgLogprobs": -0.50083143034545718
+        }
+    ],
+    "usageMetadata": {
+        "promptTokenCount": 3628,
+        "candidatesTokenCount": 1318,
+        "totalTokenCount": 7844,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+            {
+                "modality": "IMAGE",
+                "tokenCount": 3354
+            },
+            {
+                "modality": "TEXT",
+                "tokenCount": 274
+            }
+        ],
+        "candidatesTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 1318
+            }
+        ],
+        "thoughtsTokenCount": 2898
+    },
+    "modelVersion": "gemini-2.5-flash",
+    "createTime": "2026-01-18T21:49:55.731167Z",
+    "responseId": "g1VtaZ_QLIecnvgPh9iBsAs"
+}
+
+useful data is inside "content": {
+                "role": "model",
+                "parts": [
+                    {
+                        "text":
+
+part
+
+now this data (payload) is being used to execute second workflow
+for each combination (4 items) execute workflow 2 and workflow 3
+
+2. second part of workflow
+
+curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash-image:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
+--header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
+--header 'Content-Type: application/json' \
+--data '{
+    "contents": [
+        {
+            "role": "user",
+            "parts": [
+                {
+                    "text": "STRICT IDENTITY LOCK: Generate an image by fusing the elements of the uploaded images. 1. SUBJECT IDENTITY: Maintain a 100% identical match to the person'\''s face in Image 1. Lock all facial features, bone structure, and skin texture. Do not generate a generic or '\''better'\'' face; use the exact likeness of the subject provided. 2. OUTFIT FUSION: Dress the subject from Image 1 in the specific clothing items from Image 2 and Image 3. Preserve the exact colors and garment details. 3. ENVIRONMENT: High-end urban street setting, standing naturally. 4. CONSTRAINT: Do not alter facial geometry. No artistic stylization of the face."
+                },
+                {
+                    "inlineData": {
+                        "mimeType": "image/jpeg",
+                        "data": "USER_BASE64_IMAGE"
+                    }
+                },
+                {
+                    "inlineData": {
+                        "mimeType": "image/jpeg",
+                        "data": "BOTTOM_WEAR_BASE64_IMAGE"
+                    }
+                },
+                {
+                    "inlineData": {
+                        "mimeType": "image/jpeg",
+                        "data": "TOP_WEAR_BASE64_IMAGE"
+                    }
+                }
+            ]
+        }
+    ]
+}'
+
+use user image, top wear and bottom wear (base 64) in this prompt
+----------------------response of this api will be like this ------------
+ {
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "inlineData": {
+              "mimeType": "image/png",
+              "data": "BASE64_GENERATED_IMAGE"
+            }
+          }
+        ]
+      },
+      "finishReason": "STOP"
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 921,
+    "candidatesTokenCount": 1290,
+    "totalTokenCount": 2211,
+    "trafficType": "ON_DEMAND",
+    "promptTokensDetails": [
+      {
+        "modality": "IMAGE",
+        "tokenCount": 774
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 147
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1290
+      }
+    ]
+  },
+  "modelVersion": "gemini-2.5-flash-image",
+  "createTime": "2026-01-18T22:08:51.622461Z",
+  "responseId": "81ltaf3-JfSonvgPkfn7iA0"
+}
+
+-------------------------------------------------------------
+in this "data": "BASE64_GENERATED_IMAGE" this is useful data
+for next workflow
+
+3. third part of workflow
+use image generated in second workflow
+and shoes and jacket (base 64) and hit the similar curl
+
+use this text for second workflow
+{
+  "text": "IDENTITY & BASE LAYER ANCHOR: Use Image 1 as the master reference for the subject's face, skin texture, and body proportions. 1. SUBJECT IDENTITY: Strictly preserve the unique facial structure, eyes, and skin tone from Image 1—zero beautification or alteration. 2. BASE CLOTHING: Photorealistically wrap the inner top from Image 2 and the bottoms from Image 3 onto the subject's body. The fabric must follow the subject's natural curves and posture, showing realistic folds and tension points. 3. COMPOSITION: Render a full-body portrait against a neutral, high-key studio background to ensure clear lighting on the garments. 4. QUALITY: 8K resolution, sharp focus on fabric weave, and accurate color matching to the garment references."
+}
+
+and this for third part of workflow 
+
+and response of this third part is our final image (repeate it for all 12 combinations)
+
+write clean code for extendability and readability
+
+after this take response of this whole workflow and use it for frontend
+UI view 
+make clean UI for this 
+also i should be able to see the syleids and myntra link in each final generated image (myntra link is just myntra.com/styleID)
+make UI clean and intutive
+
+add logs at each step so that it will be easy for debugging purposes
+
+for images for a style there is one csv file it has payload like this
+
+{
+  "back": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/c63ac34e-63d7-43c3-90e9-a6e615e3b40a1713527861775ADByArvindMenSlimFitOpaqueCasualShirt3.jpg",
+    "supportedResolutions": "1080X1440,540X720,360X480,48X64,81X108",
+    "order": 3
+  },
+  "bottom": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/9a6651cb-5f13-4f3a-9a5d-eca0847c85401713527861805ADByArvindMenSlimFitOpaqueCasualShirt7.jpg",
+    "supportedResolutions": "1080X1440,540X720,360X480,48X64,81X108",
+    "order": 7
+  },
+  "default": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/881ee050-cd57-4f0e-91e2-b1a1d8a36b021713527861998ADByArvindMenSlimFitOpaqueCasualShirt1.jpg",
+    "supportedResolutions": "1080X1440,540X720,180X240,360X480,150X200,96X128,81X108,48X64",
+    "order": 1
+  },
+  "default_deprecated": {
+    "imageUrl": "https://azmyntra.myntassets.com/dam-assets/assets/images/29066024/2024/4/19/881ee050-cd57-4f0e-91e2-b1a1d8a36b021713527861998ADByArvindMenSlimFitOpaqueCasualShirt1.jpg",
+    "supportedResolutions": "1080X1440,540X720,180X240,360X480,150X200,96X128,81X108,48X64",
+    "order": 9999
+  },
+  "front": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/ebdb5a1a-6c4e-48f9-a2b6-8af45452d6001713527861921ADByArvindMenSlimFitOpaqueCasualShirt2.jpg",
+    "supportedResolutions": "1080X1440,540X720,360X480,48X64,81X108",
+    "order": 2
+  },
+  "left": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/3a6affb3-93ad-4874-bf71-a794004814101713527861959ADByArvindMenSlimFitOpaqueCasualShirt5.jpg",
+    "supportedResolutions": "1080X1440,540X720,360X480,48X64,81X108",
+    "order": 5
+  },
+  "right": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/f444d896-7e34-4b52-a87d-7e93a0ed7cf01713527861844ADByArvindMenSlimFitOpaqueCasualShirt4.jpg",
+    "supportedResolutions": "1080X1440,540X720,360X480,48X64,81X108",
+    "order": 4
+  },
+  "search": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/881ee050-cd57-4f0e-91e2-b1a1d8a36b021713527861998ADByArvindMenSlimFitOpaqueCasualShirt1.jpg",
+    "supportedResolutions": "1080X1440,540X720,180X240,360X480,150X200,96X128,81X108,48X64",
+    "order": 9999
+  },
+  "size_representation": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/sizechart/2016/12/14/11481690794680-shirt_men.png"
+  },
+  "top": {
+    "imageUrl": "http://assets.myntassets.com/assets/images/29066024/2024/4/19/cec2b45d-b296-4b57-a86e-99ce32c6b2c71713527861883ADByArvindMenSlimFitOpaqueCasualShirt6.jpg",
+    "supportedResolutions": "1080X1440,540X720,360X480,48X64,81X108",
+    "order": 6
+  }
+}
+
+use 
+"default": {
+    "imageUrl": 
+from this for all usecased in api payload
+
+@Backend/fashifyInventoryImagePayload.csv 

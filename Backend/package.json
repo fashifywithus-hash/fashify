@@ -4,7 +4,7 @@
   "description": "Backend API server for Fashify",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only --no-notify src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit"
