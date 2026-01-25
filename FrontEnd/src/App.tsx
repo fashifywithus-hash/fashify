@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import ItemSelection from "./pages/ItemSelection";
 import Suggestions from "./pages/Suggestions";
+import OutfitCombinations from "./pages/OutfitCombinations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/selection" element={<ItemSelection />} />
             <Route path="/suggestions" element={<Suggestions />} />
+            <Route path="/outfit-combinations" element={<OutfitCombinations />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

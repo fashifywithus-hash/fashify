@@ -131,8 +131,17 @@ const ItemSelection = () => {
     if (currentCategoryIndex < CATEGORIES.length - 1) {
       setCurrentCategoryIndex(currentCategoryIndex + 1);
     } else {
-      // All categories done - navigate to suggestions
-      navigate("/suggestions");
+      // All categories done - prepare selected items and navigate to outfit combinations
+      const selectedItems = {
+        shirts: Array.from(selections.shirts),
+        jackets: Array.from(selections.outerwear), // outerwear maps to jackets
+        jeans: Array.from(selections.bottomwear), // bottomwear maps to jeans
+        shoes: Array.from(selections.footwear),
+      };
+      
+      // Store selections in sessionStorage to pass to next page
+      sessionStorage.setItem('selectedItems', JSON.stringify(selectedItems));
+      navigate("/outfit-combinations");
     }
   };
 

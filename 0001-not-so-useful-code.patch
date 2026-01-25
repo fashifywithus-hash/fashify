@@ -1,0 +1,2333 @@
+From c8fa77b1a0a96902c79ccd642b06030b922debab Mon Sep 17 00:00:00 2001
+From: prashant-k2_myntra <prashant.k2@myntra.com>
+Date: Sun, 25 Jan 2026 17:46:10 +0530
+Subject: [PATCH] not so useful code
+
+---
+ Backend/Prompt.txt                            |  17 +-
+ Backend/core/csvParser.js                     | 225 ++++++++++++++
+ Backend/core/scoringEngine.js                 | 221 ++++++++++++++
+ Backend/package-lock.json                     | 240 ++++++++++++++-
+ Backend/package.json                          |   2 +
+ Backend/services/recommendationService.js     | 120 ++++++++
+ Backend/src/config/database.ts                |   5 +-
+ Backend/src/config/jwt.ts                     |   2 +-
+ Backend/src/config/supabase.ts                |   4 +-
+ Backend/src/routes/outfitCombinations.ts      | 113 +++++++
+ Backend/src/server.ts                         |   2 +
+ Backend/src/services/geminiService.ts         | 275 +++++++++++++++++
+ .../src/services/outfitCombinationService.ts  | 192 ++++++++++++
+ Backend/src/utils/imagePayloadParser.ts       |  88 ++++++
+ Backend/src/utils/imageUtils.ts               |  36 +++
+ Backend/src/utils/retryUtils.ts               |  95 ++++++
+ Backend/tsconfig.json                         |   3 +-
+ FrontEnd/src/App.tsx                          |   2 +
+ FrontEnd/src/pages/ItemSelection.tsx          |  13 +-
+ FrontEnd/src/pages/OutfitCombinations.tsx     | 281 ++++++++++++++++++
+ install-mongodb.sh                            |   1 +
+ 21 files changed, 1919 insertions(+), 18 deletions(-)
+ create mode 100644 Backend/core/csvParser.js
+ create mode 100644 Backend/core/scoringEngine.js
+ create mode 100644 Backend/services/recommendationService.js
+ create mode 100644 Backend/src/routes/outfitCombinations.ts
+ create mode 100644 Backend/src/services/geminiService.ts
+ create mode 100644 Backend/src/services/outfitCombinationService.ts
+ create mode 100644 Backend/src/utils/imagePayloadParser.ts
+ create mode 100644 Backend/src/utils/imageUtils.ts
+ create mode 100644 Backend/src/utils/retryUtils.ts
+ create mode 100644 FrontEnd/src/pages/OutfitCombinations.tsx
+ create mode 100755 install-mongodb.sh
+
+diff --git a/Backend/Prompt.txt b/Backend/Prompt.txt
+index 269e3a0..55af4c5 100644
+--- a/Backend/Prompt.txt
++++ b/Backend/Prompt.txt
+@@ -2,6 +2,7 @@ i'm now planning to enhance the features in this service
+ so basically after /api/recommendations call
+ we will get 4 items from each category
+ post that there is some code is already written to select atleast two items from each category (check it once)
++although it's not working in the end all 4 from each category is visible
+ now with at max 4 selected items from each category we will make further call to backend to serve it for new page
+ below are the details of new page and also the api endpoint that you need to implement
+ maybe you can use styleID for uniqely identifying the data
+@@ -23,7 +24,7 @@ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashi
+                 {
+                     "inlineData": {
+                         "mimeType": "image/jpeg",
+-                        "data": "BASE64_IMAGE"
++                        "data": "BASE64_USER_IMAGE"
+                     }
+                 },
+                 {
+@@ -76,7 +77,7 @@ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashi
+ }'
+ -------------------------------------------------------
+ for inventroy use this csv file Backend/Item-attributes.csv and add base64 image of user
+-
++for user image take it from db it should be present there
+ response of this endpoint will be like this
+ {
+     "candidates": [
+@@ -129,13 +130,13 @@ useful data is inside "content": {
+ 
+ part
+ 
+-now this data (payload) is being used to execute second workflow
+-for each combination (4 items) execute workflow 2 and workflow 3
++now this data (payload) is being used to execute second part of workflow
++for each combination (4 items) execute workflow part 2 and workflow part 3
+ 
+ 2. second part of workflow
+ 
+ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash-image:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
+---header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
++--header 'Authorization: Bearer ya29.a0AUMWg_JPtA08ppu3QYWaWSiVLfTIqNKUPKwA82r0d7ZyIIZxDKSeQ6TCCk5wQFFQqNw4RI61dDzRRdsLjIhSvWd5FPpMH-m4WgeuyhiTX3ilkwByGclsHuG1VnnhmjI2yVS0sN8lFA_nH2G-JIadfZ864TkMZUYw5eWwr59T8aFB63g5PY3hp0YFeR_OjrqXPdoFIn3LM2v8hgaCgYKAQASARMSFQHGX2MiolTDcL2XgkxOdenXiV8Jtg0213' \
+ --header 'Content-Type: application/json' \
+ --data '{
+     "contents": [
+@@ -168,7 +169,7 @@ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashi
+     ]
+ }'
+ 
+-use user image, top wear and bottom wear (base 64) in this prompt
++use user image (from database), top wear and bottom wear (base 64) in this prompt
+ ----------------------response of this api will be like this ------------
+  {
+   "candidates": [
+@@ -241,7 +242,7 @@ make UI clean and intutive
+ 
+ add logs at each step so that it will be easy for debugging purposes
+ 
+-for images for a style there is one csv file it has payload like this
++for images for a style there is one csv file it has payload like this against each styleID
+ 
+ {
+   "back": {
+@@ -297,6 +298,6 @@ for images for a style there is one csv file it has payload like this
+ use 
+ "default": {
+     "imageUrl": 
+-from this for all usecased in api payload
++from this for all usecases (default will always present) in api payload against styleID
+ 
+ @Backend/fashifyInventoryImagePayload.csv 
+\ No newline at end of file
+diff --git a/Backend/core/csvParser.js b/Backend/core/csvParser.js
+new file mode 100644
+index 0000000..96c970c
+--- /dev/null
++++ b/Backend/core/csvParser.js
+@@ -0,0 +1,225 @@
++"use strict";
++/**
++ * CSV Parser utility to load and parse inventory data
++ * BACKEND LOGIC - Data parsing and loading
++ */
++var __importDefault = (this && this.__importDefault) || function (mod) {
++    return (mod && mod.__esModule) ? mod : { "default": mod };
++};
++Object.defineProperty(exports, "__esModule", { value: true });
++exports.parseInventoryCSV = parseInventoryCSV;
++exports.loadInventoryFromCSV = loadInventoryFromCSV;
++const fs_1 = __importDefault(require("fs"));
++const path_1 = __importDefault(require("path"));
++/**
++ * Parse CSV content into InventoryItem array
++ */
++function parseInventoryCSV(csvContent) {
++    const lines = csvContent.trim().split("\n");
++    // Find the first data row (skip multi-line header)
++    // Header spans lines 1-7, data starts at line 8
++    // Look for the first line that:
++    // 1. Has a proper item description (not a header keyword)
++    // 2. Has enough fields (at least 15+ when parsed)
++    // 3. Doesn't contain emojis or header keywords
++    let dataStartIndex = 7; // Default to line 8 (index 7)
++    // Try to find where actual data starts
++    // The CSV header spans lines 1-7, so we start checking from line 2
++    for (let i = 1; i < Math.min(lines.length, 15); i++) {
++        const line = lines[i].trim();
++        if (!line || !line.includes(','))
++            continue;
++        // Parse the line to check field count
++        const parsed = parseCSVLine(line);
++        const firstField = parsed[0]?.trim().toLowerCase() || "";
++        // Header lines have specific patterns - be very strict here
++        // Check multiple conditions to avoid false positives
++        const isHeaderKeyword = firstField.match(/^(description|category|type|color|item|style|main|sub|gender|base|weather|lifestyle|body|skin|formality|layer|hot|cold)$/i);
++        const hasEmojis = line.match(/[🛹⬜👔✨🎩🎉]/);
++        const hasHeaderText = line.toLowerCase().includes('streetwear') ||
++            line.toLowerCase().includes('formal, casual') ||
++            line.toLowerCase().includes('lifestyle_tags') ||
++            line.toLowerCase().includes('weather_max') ||
++            line.toLowerCase().includes('weather_min') ||
++            line.toLowerCase().includes('style_tags');
++        const hasFewFields = parsed.length < 15;
++        const isHeaderLine = isHeaderKeyword || hasEmojis || hasHeaderText || firstField === '' || hasFewFields;
++        // Data lines must have:
++        // - NOT a header keyword
++        // - At least 15+ fields when parsed
++        // - A real description (contains letters, more than 2 chars)
++        // - No emojis
++        if (!isHeaderLine && parsed.length >= 15 && firstField.length > 2) {
++            // Additional check: first field should look like an item description
++            // (contains letters, not just numbers or special chars)
++            if (firstField.match(/[a-z]/i) && !firstField.match(/^[\d\s\-]+$/)) {
++                dataStartIndex = i;
++                console.log(`✓ Found data starting at line ${i + 1}: "${firstField.substring(0, 30)}..." (${parsed.length} fields)`);
++                break;
++            }
++        }
++        else if (isHeaderLine) {
++            // Log header lines for debugging
++            console.log(`  Skipping header line ${i + 1}: "${firstField}" (${parsed.length} fields)`);
++        }
++    }
++    const dataLines = lines.slice(dataStartIndex);
++    console.log(`Processing ${dataLines.length} data lines (starting from line ${dataStartIndex + 1})`);
++    const items = [];
++    for (const line of dataLines) {
++        if (!line.trim())
++            continue;
++        try {
++            // Parse CSV line - handling quoted fields with commas
++            const parsed = parseCSVLine(line);
++            // Check if we have enough fields (should have at least 15 fields)
++            // The CSV has 19 fields: Description, Category, Type, Color, Item Link, StyleId, 
++            // Main_Category, Sub_Category, Gender, Base_Color, Color_Family, Weather_Min, 
++            // Weather_Max, Style_Tags, Lifestyle_Tags, Body_Type_Fit, Skin_Undertone, 
++            // Formality_Score, Layer_Level
++            if (parsed.length < 15) {
++                console.warn(`Skipping incomplete row (only ${parsed.length} fields, need 15+):`, line.substring(0, 80) + "...");
++                continue;
++            }
++            // Additional validation: first field should be an item description
++            const firstField = parsed[0]?.trim() || "";
++            if (!firstField || firstField.length < 2) {
++                console.warn(`Skipping invalid row (empty first field)`);
++                continue;
++            }
++            // Skip header keywords
++            if (firstField.match(/^(description|category|type|color|item|style|main|sub|gender|base|weather|lifestyle|body|skin|formality|layer|hot|cold)$/i)) {
++                console.warn(`Skipping header row: "${firstField}"`);
++                continue;
++            }
++            // Map CSV columns to InventoryItem
++            const item = {
++                description: parsed[0] || "",
++                category: parsed[1] || "",
++                type: parsed[2] || "",
++                color: parsed[3] || "",
++                itemLink: parsed[4] || "",
++                styleId: parsed[5] || "",
++                mainCategory: parsed[6] || "",
++                subCategory: parsed[7] || "",
++                gender: parsed[8] || "",
++                baseColor: parsed[9] || "",
++                colorFamily: parsed[10] || "",
++                weatherMin: parseInt(parsed[11] || "3", 10),
++                weatherMax: parseInt(parsed[12] || "5", 10),
++                styleTags: parseJSONArray(parsed[13] || "[]"),
++                lifestyleTags: parseJSONArray(parsed[14] || "[]"),
++                bodyTypeFit: parsed[15] || "Average",
++                skinUndertone: parsed[16] || "Neutral",
++                formalityScore: parseInt(parsed[17] || "5", 10),
++                layerLevel: parseInt(parsed[18] || "0", 10),
++            };
++            items.push(item);
++        }
++        catch (error) {
++            console.error("Error parsing CSV line:", line, error);
++        }
++    }
++    console.log(`Parsed ${items.length} items from CSV`);
++    return items;
++}
++/**
++ * Parse a CSV line handling quoted fields
++ */
++function parseCSVLine(line) {
++    const result = [];
++    let current = "";
++    let inQuotes = false;
++    for (let i = 0; i < line.length; i++) {
++        const char = line[i];
++        if (char === '"') {
++            inQuotes = !inQuotes;
++        }
++        else if (char === "," && !inQuotes) {
++            result.push(current.trim());
++            current = "";
++        }
++        else {
++            current += char;
++        }
++    }
++    result.push(current.trim());
++    return result;
++}
++/**
++ * Parse JSON array string (handles both JSON format and simple comma-separated)
++ */
++function parseJSONArray(str) {
++    if (!str || str.trim() === "")
++        return [];
++    // Try parsing as JSON first
++    try {
++        const parsed = JSON.parse(str);
++        if (Array.isArray(parsed)) {
++            return parsed.map((s) => normalizeStyleTag(s));
++        }
++    }
++    catch {
++        // If not JSON, try splitting by comma
++        return str.split(",").map(s => normalizeStyleTag(s.trim().replace(/^\[|\]$/g, "").replace(/"/g, "")));
++    }
++    return [];
++}
++/**
++ * Normalize style tags to match user preference format
++ */
++function normalizeStyleTag(tag) {
++    const normalized = tag.trim().toLowerCase();
++    // Map CSV style tags to user preference format
++    const styleMap = {
++        "streetwear": "streetwear",
++        "minimal": "minimal",
++        "classic": "classic",
++        "trendy": "trendy",
++        "smart casual": "smart-casual",
++        "party": "party",
++    };
++    return styleMap[normalized] || normalized;
++}
++/**
++ * Load inventory from CSV file
++ * Uses Node.js file system to read the CSV file
++ */
++async function loadInventoryFromCSV() {
++    try {
++        // Get the path to the CSV file
++        // The CSV file is in the BackEnd directory root
++        // Try multiple possible locations:
++        // 1. Relative to current file (BackEnd/core/ -> BackEnd/)
++        // 2. From process.cwd() (should be BackEnd/ when running npm run dev)
++        // 3. From project root (if running from different location)
++        const possiblePaths = [
++            path_1.default.join(__dirname, "..", "Item-attributes.csv"), // From core/ to BackEnd/
++            path_1.default.resolve(process.cwd(), "Item-attributes.csv"), // From current working directory
++            path_1.default.resolve(__dirname, "..", "..", "BackEnd", "Item-attributes.csv"), // From project root
++        ];
++        let csvPath = null;
++        for (const possiblePath of possiblePaths) {
++            if (fs_1.default.existsSync(possiblePath)) {
++                csvPath = possiblePath;
++                break;
++            }
++        }
++        if (!csvPath) {
++            throw new Error(`CSV file not found. Tried: ${possiblePaths.join(", ")}`);
++        }
++        // Check if file exists
++        if (!fs_1.default.existsSync(csvPath)) {
++            throw new Error(`CSV file not found at: ${csvPath}`);
++        }
++        // Read the CSV file using Node.js file system
++        const csvContent = fs_1.default.readFileSync(csvPath, "utf-8");
++        console.log(`📄 Loading inventory from: ${csvPath}`);
++        console.log(`📄 File size: ${(csvContent.length / 1024).toFixed(2)} KB`);
++        return parseInventoryCSV(csvContent);
++    }
++    catch (error) {
++        console.error("Error loading inventory CSV:", error);
++        throw new Error(`Failed to load inventory data: ${error.message}`);
++    }
++}
+diff --git a/Backend/core/scoringEngine.js b/Backend/core/scoringEngine.js
+new file mode 100644
+index 0000000..95f5ed4
+--- /dev/null
++++ b/Backend/core/scoringEngine.js
+@@ -0,0 +1,221 @@
++"use strict";
++/**
++ * Scoring Engine for matching user preferences with inventory items
++ * BACKEND LOGIC - Core scoring algorithm
++ */
++Object.defineProperty(exports, "__esModule", { value: true });
++exports.ScoringEngine = void 0;
++class ScoringEngine {
++    /**
++     * Calculate match score for an item based on user preferences
++     */
++    calculateScore(item, preferences) {
++        const matchDetails = {
++            genderMatch: this.matchGender(item, preferences),
++            weatherMatch: this.matchWeather(item, preferences),
++            lifestyleMatch: this.matchLifestyle(item, preferences),
++            bodyTypeMatch: this.matchBodyType(item, preferences),
++            styleMatch: this.matchStyle(item, preferences),
++            skinToneMatch: this.matchSkinTone(item, preferences),
++        };
++        // Weighted scoring system
++        const weights = {
++            gender: 1.0, // Must match (0 or 1) - but we'll still show items even with low scores
++            weather: 0.25, // Important but flexible
++            lifestyle: 0.20, // Important
++            bodyType: 0.15, // Important for fit
++            style: 0.25, // Important for preference
++            skinTone: 0.15, // Nice to have
++        };
++        // Calculate score even for gender mismatches (will be filtered later but scored for comparison)
++        // This ensures we can still show items if needed
++        // Calculate base score (even if gender doesn't match, we still give partial credit)
++        // Gender mismatch reduces score but doesn't zero it completely
++        const baseScore = matchDetails.genderMatch * weights.gender +
++            matchDetails.weatherMatch * weights.weather +
++            matchDetails.lifestyleMatch * weights.lifestyle +
++            matchDetails.bodyTypeMatch * weights.bodyType +
++            matchDetails.styleMatch * weights.style +
++            matchDetails.skinToneMatch * weights.skinTone;
++        // If gender doesn't match, heavily penalize but don't zero it
++        // This way we can still show items if no matches exist
++        const finalScore = matchDetails.genderMatch === 0
++            ? baseScore * 0.1 // 10% of score for gender mismatches (very low but not zero)
++            : baseScore;
++        return {
++            ...item,
++            score: Math.round(finalScore * 100) / 100, // Round to 2 decimal places
++            matchDetails,
++        };
++    }
++    /**
++     * Match gender (exact match required)
++     */
++    matchGender(item, preferences) {
++        const itemGender = (item.gender || "").toLowerCase().trim();
++        const userGender = (preferences.gender || "").toLowerCase().trim();
++        // Handle unisex items
++        if (itemGender === "unisex") {
++            return 1.0;
++        }
++        // Exact match
++        if (itemGender === userGender && itemGender !== "") {
++            return 1.0;
++        }
++        // If no match, return 0 (will filter out this item)
++        if (itemGender !== "" && userGender !== "") {
++            console.debug(`Gender mismatch: item="${itemGender}", user="${userGender}"`);
++        }
++        return 0;
++    }
++    /**
++     * Match weather preference
++     * User weather: 0-100 slider (0 = extremely cold, 100 = very hot)
++     * Item weather: 1-5 scale (1 = hot, 5 = very cold)
++     */
++    matchWeather(item, preferences) {
++        // Convert user slider (0-100) to item scale (1-5)
++        // 0 (extremely cold) -> 5, 100 (very hot) -> 1
++        const userWeatherScale = 5 - (preferences.weather / 100) * 4;
++        // Check if user weather falls within item's range
++        if (userWeatherScale >= item.weatherMin && userWeatherScale <= item.weatherMax) {
++            return 1.0; // Perfect match
++        }
++        // Calculate distance from range
++        let distance = 0;
++        if (userWeatherScale < item.weatherMin) {
++            distance = item.weatherMin - userWeatherScale;
++        }
++        else {
++            distance = userWeatherScale - item.weatherMax;
++        }
++        // Normalize distance (max distance is 4, so divide by 4)
++        const normalizedDistance = Math.min(distance / 4, 1);
++        // Return score (closer = higher score)
++        return Math.max(0, 1 - normalizedDistance * 0.5); // Penalize up to 50% for distance
++    }
++    /**
++     * Match lifestyle preference
++     */
++    matchLifestyle(item, preferences) {
++        const userLifestyle = preferences.lifestyle.toLowerCase();
++        const itemLifestyles = item.lifestyleTags.map(tag => tag.toLowerCase());
++        // Exact match
++        if (itemLifestyles.includes(userLifestyle)) {
++            return 1.0;
++        }
++        // Partial matches (e.g., casual items might work for formal in some cases)
++        if (userLifestyle === "formal" && itemLifestyles.includes("casual")) {
++            return 0.5; // Formal users might accept smart casual
++        }
++        if (userLifestyle === "casual" && itemLifestyles.includes("formal")) {
++            return 0.6; // Casual users might accept formal items
++        }
++        if (userLifestyle === "athletic" && itemLifestyles.includes("casual")) {
++            return 0.7; // Athletic users might accept casual items
++        }
++        return 0.2; // Low score for no match
++    }
++    /**
++     * Match body type
++     */
++    matchBodyType(item, preferences) {
++        const itemBodyType = item.bodyTypeFit.toLowerCase();
++        const userBodyType = preferences.bodyType.toLowerCase();
++        // Exact match
++        if (itemBodyType === userBodyType || itemBodyType === "average") {
++            return 1.0;
++        }
++        // Similar body types get partial scores
++        const bodyTypeSimilarity = {
++            slim: ["athletic", "average"],
++            athletic: ["slim", "muscular", "average"],
++            muscular: ["athletic", "average"],
++            average: ["slim", "athletic", "muscular", "curvy"],
++            curvy: ["average", "plus"],
++            plus: ["curvy", "average"],
++        };
++        const similarTypes = bodyTypeSimilarity[userBodyType] || [];
++        if (similarTypes.includes(itemBodyType)) {
++            return 0.7;
++        }
++        return 0.4; // Lower score for less similar types
++    }
++    /**
++     * Match style preferences
++     */
++    matchStyle(item, preferences) {
++        if (preferences.styles.length === 0) {
++            return 0.5; // Neutral score if no styles selected
++        }
++        const itemStyles = item.styleTags.map(tag => tag.toLowerCase());
++        const userStyles = preferences.styles.map(style => style.toLowerCase());
++        // Count matching styles
++        const matches = userStyles.filter(userStyle => itemStyles.some(itemStyle => {
++            // Handle variations
++            if (userStyle === "smart-casual" && itemStyle.includes("smart")) {
++                return true;
++            }
++            return itemStyle === userStyle || itemStyle.includes(userStyle);
++        }));
++        if (matches.length === 0) {
++            return 0.2; // Low score for no matches
++        }
++        // Score based on percentage of user styles that match
++        const matchRatio = matches.length / userStyles.length;
++        // Bonus if multiple styles match
++        const bonus = matches.length > 1 ? 0.1 : 0;
++        return Math.min(1.0, matchRatio + bonus);
++    }
++    /**
++     * Match skin tone/undertone
++     */
++    matchSkinTone(item, preferences) {
++        // Convert user skin tone slider (0-100) to undertone
++        // 0-33 = Cool, 34-66 = Neutral, 67-100 = Warm
++        let userUndertone = "neutral";
++        if (preferences.skinTone < 34) {
++            userUndertone = "cool";
++        }
++        else if (preferences.skinTone > 66) {
++            userUndertone = "warm";
++        }
++        const itemUndertone = item.skinUndertone.toLowerCase();
++        // Exact match
++        if (itemUndertone === userUndertone) {
++            return 1.0;
++        }
++        // Neutral works with both
++        if (itemUndertone === "neutral" || userUndertone === "neutral") {
++            return 0.8;
++        }
++        // Mismatch
++        return 0.5;
++    }
++    /**
++     * Score all items and return sorted by score
++     * ALWAYS returns items sorted by score, even if score is very low
++     * This ensures we can always show recommendations as long as items exist
++     */
++    scoreItems(items, preferences) {
++        // Score all items (including gender mismatches - they get very low scores)
++        const scored = items.map(item => this.calculateScore(item, preferences));
++        // Separate items by gender match for logging
++        const genderMatched = scored.filter(item => item.matchDetails.genderMatch > 0);
++        const genderMismatched = scored.filter(item => item.matchDetails.genderMatch === 0);
++        // Log debugging info
++        console.log(`Scoring: ${genderMatched.length} items with gender match, ${genderMismatched.length} with gender mismatch (low scores)`);
++        // ALWAYS return ALL items sorted by score (descending)
++        // Even gender mismatches are included (they have very low scores ~10% of normal)
++        // This ensures we can always show recommendations
++        const sorted = scored.sort((a, b) => b.score - a.score);
++        // Log score distribution
++        if (sorted.length > 0) {
++            const maxScore = sorted[0].score;
++            const minScore = sorted[sorted.length - 1].score;
++            console.log(`Score range: ${maxScore.toFixed(2)} (best) to ${minScore.toFixed(2)} (worst)`);
++        }
++        return sorted;
++    }
++}
++exports.ScoringEngine = ScoringEngine;
+diff --git a/Backend/package-lock.json b/Backend/package-lock.json
+index 3386d86..98c1fec 100644
+--- a/Backend/package-lock.json
++++ b/Backend/package-lock.json
+@@ -9,6 +9,8 @@
+       "version": "1.0.0",
+       "license": "ISC",
+       "dependencies": {
++        "@supabase/supabase-js": "^2.90.1",
++        "axios": "^1.13.2",
+         "bcryptjs": "^2.4.3",
+         "cors": "^2.8.5",
+         "dotenv": "^16.4.5",
+@@ -69,6 +71,80 @@
+         "sparse-bitfield": "^3.0.3"
+       }
+     },
++    "node_modules/@supabase/auth-js": {
++      "version": "2.90.1",
++      "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.90.1.tgz",
++      "integrity": "sha512-vxb66dgo6h3yyPbR06735Ps+dK3hj0JwS8w9fdQPVZQmocSTlKUW5MfxSy99mN0XqCCuLMQ3jCEiIIUU23e9ng==",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/functions-js": {
++      "version": "2.90.1",
++      "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.90.1.tgz",
++      "integrity": "sha512-x9mV9dF1Lam9qL3zlpP6mSM5C9iqMPtF5B/tU1Jj/F0ufX5mjDf9ghVBaErVxmrQJRL4+iMKWKY2GnODkpS8tw==",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/postgrest-js": {
++      "version": "2.90.1",
++      "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.90.1.tgz",
++      "integrity": "sha512-jh6vqzaYzoFn3raaC0hcFt9h+Bt+uxNRBSdc7PfToQeRGk7PDPoweHsbdiPWREtDVTGKfu+PyPW9e2jbK+BCgQ==",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/realtime-js": {
++      "version": "2.90.1",
++      "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.90.1.tgz",
++      "integrity": "sha512-PWbnEMkcQRuor8jhObp4+Snufkq8C6fBp+MchVp2qBPY1NXk/c3Iv3YyiFYVzo0Dzuw4nAlT4+ahuPggy4r32w==",
++      "dependencies": {
++        "@types/phoenix": "^1.6.6",
++        "@types/ws": "^8.18.1",
++        "tslib": "2.8.1",
++        "ws": "^8.18.2"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/storage-js": {
++      "version": "2.90.1",
++      "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.90.1.tgz",
++      "integrity": "sha512-GHY+Ps/K/RBfRj7kwx+iVf2HIdqOS43rM2iDOIDpapyUnGA9CCBFzFV/XvfzznGykd//z2dkGZhlZZprsVFqGg==",
++      "dependencies": {
++        "iceberg-js": "^0.8.1",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/supabase-js": {
++      "version": "2.90.1",
++      "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.90.1.tgz",
++      "integrity": "sha512-U8KaKGLUgTIFHtwEW1dgw1gK7XrdpvvYo7nzzqPx721GqPe8WZbAiLh/hmyKLGBYQ/mmQNr20vU9tWSDZpii3w==",
++      "dependencies": {
++        "@supabase/auth-js": "2.90.1",
++        "@supabase/functions-js": "2.90.1",
++        "@supabase/postgrest-js": "2.90.1",
++        "@supabase/realtime-js": "2.90.1",
++        "@supabase/storage-js": "2.90.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/@tsconfig/node10": {
+       "version": "1.0.12",
+       "dev": true,
+@@ -162,6 +238,12 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/ms": {
++      "version": "2.1.0",
++      "resolved": "https://registry.npmjs.org/@types/ms/-/ms-2.1.0.tgz",
++      "integrity": "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==",
++      "dev": true
++    },
+     "node_modules/@types/multer": {
+       "version": "1.4.13",
+       "resolved": "https://registry.npmjs.org/@types/multer/-/multer-1.4.13.tgz",
+@@ -176,12 +258,16 @@
+       "version": "22.19.7",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-22.19.7.tgz",
+       "integrity": "sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "undici-types": "~6.21.0"
+       }
+     },
++    "node_modules/@types/phoenix": {
++      "version": "1.6.7",
++      "resolved": "https://registry.npmjs.org/@types/phoenix/-/phoenix-1.6.7.tgz",
++      "integrity": "sha512-oN9ive//QSBkf19rfDv45M7eZPi0eEXylht2OLEXicu5b4KoQ1OzXIw+xDSGWxSxe1JmepRR/ZH283vsu518/Q=="
++    },
+     "node_modules/@types/qs": {
+       "version": "6.14.0",
+       "dev": true,
+@@ -240,6 +326,14 @@
+         "@types/webidl-conversions": "*"
+       }
+     },
++    "node_modules/@types/ws": {
++      "version": "8.18.1",
++      "resolved": "https://registry.npmjs.org/@types/ws/-/ws-8.18.1.tgz",
++      "integrity": "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==",
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
+     "node_modules/accepts": {
+       "version": "1.3.8",
+       "license": "MIT",
+@@ -300,6 +394,23 @@
+       "version": "1.1.1",
+       "license": "MIT"
+     },
++    "node_modules/asynckit": {
++      "version": "0.4.0",
++      "resolved": "https://registry.npmjs.org/asynckit/-/asynckit-0.4.0.tgz",
++      "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==",
++      "license": "MIT"
++    },
++    "node_modules/axios": {
++      "version": "1.13.2",
++      "resolved": "https://registry.npmjs.org/axios/-/axios-1.13.2.tgz",
++      "integrity": "sha512-VPk9ebNqPcy5lRGuSlKx752IlDatOjT9paPlm8A7yOuW2Fbvp4X3JznJtT4f0GzGLLiWE9W8onz51SqLYwzGaA==",
++      "license": "MIT",
++      "dependencies": {
++        "follow-redirects": "^1.15.6",
++        "form-data": "^4.0.4",
++        "proxy-from-env": "^1.1.0"
++      }
++    },
+     "node_modules/balanced-match": {
+       "version": "1.0.2",
+       "dev": true,
+@@ -460,6 +571,18 @@
+         "node": ">= 6"
+       }
+     },
++    "node_modules/combined-stream": {
++      "version": "1.0.8",
++      "resolved": "https://registry.npmjs.org/combined-stream/-/combined-stream-1.0.8.tgz",
++      "integrity": "sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==",
++      "license": "MIT",
++      "dependencies": {
++        "delayed-stream": "~1.0.0"
++      },
++      "engines": {
++        "node": ">= 0.8"
++      }
++    },
+     "node_modules/concat-map": {
+       "version": "0.0.1",
+       "dev": true,
+@@ -593,6 +716,15 @@
+         }
+       }
+     },
++    "node_modules/delayed-stream": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/delayed-stream/-/delayed-stream-1.0.0.tgz",
++      "integrity": "sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.4.0"
++      }
++    },
+     "node_modules/depd": {
+       "version": "2.0.0",
+       "license": "MIT",
+@@ -681,6 +813,21 @@
+         "node": ">= 0.4"
+       }
+     },
++    "node_modules/es-set-tostringtag": {
++      "version": "2.1.0",
++      "resolved": "https://registry.npmjs.org/es-set-tostringtag/-/es-set-tostringtag-2.1.0.tgz",
++      "integrity": "sha512-j6vWzfrGVfyXxge+O0x5sh6cvxAog0a/4Rdd2K36zCMV5eJ+/+tOAngRO8cODMNWbVRdVlmGZQL2YS3yR8bIUA==",
++      "license": "MIT",
++      "dependencies": {
++        "es-errors": "^1.3.0",
++        "get-intrinsic": "^1.2.6",
++        "has-tostringtag": "^1.0.2",
++        "hasown": "^2.0.2"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
+     "node_modules/escape-html": {
+       "version": "1.0.3",
+       "license": "MIT"
+@@ -796,6 +943,42 @@
+       "version": "2.0.0",
+       "license": "MIT"
+     },
++    "node_modules/follow-redirects": {
++      "version": "1.15.11",
++      "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.15.11.tgz",
++      "integrity": "sha512-deG2P0JfjrTxl50XGCDyfI97ZGVCxIpfKYmfyrQ54n5FO/0gfIES8C/Psl6kWVDolizcaaxZJnTS0QSMxvnsBQ==",
++      "funding": [
++        {
++          "type": "individual",
++          "url": "https://github.com/sponsors/RubenVerborgh"
++        }
++      ],
++      "license": "MIT",
++      "engines": {
++        "node": ">=4.0"
++      },
++      "peerDependenciesMeta": {
++        "debug": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/form-data": {
++      "version": "4.0.5",
++      "resolved": "https://registry.npmjs.org/form-data/-/form-data-4.0.5.tgz",
++      "integrity": "sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==",
++      "license": "MIT",
++      "dependencies": {
++        "asynckit": "^0.4.0",
++        "combined-stream": "^1.0.8",
++        "es-set-tostringtag": "^2.1.0",
++        "hasown": "^2.0.2",
++        "mime-types": "^2.1.12"
++      },
++      "engines": {
++        "node": ">= 6"
++      }
++    },
+     "node_modules/forwarded": {
+       "version": "0.2.0",
+       "license": "MIT",
+@@ -926,6 +1109,21 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/has-tostringtag": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/has-tostringtag/-/has-tostringtag-1.0.2.tgz",
++      "integrity": "sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==",
++      "license": "MIT",
++      "dependencies": {
++        "has-symbols": "^1.0.3"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
+     "node_modules/hasown": {
+       "version": "2.0.2",
+       "license": "MIT",
+@@ -954,6 +1152,14 @@
+         "url": "https://opencollective.com/express"
+       }
+     },
++    "node_modules/iceberg-js": {
++      "version": "0.8.1",
++      "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
++      "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/iconv-lite": {
+       "version": "0.4.24",
+       "license": "MIT",
+@@ -1447,6 +1653,12 @@
+         "node": ">= 0.10"
+       }
+     },
++    "node_modules/proxy-from-env": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/proxy-from-env/-/proxy-from-env-1.1.0.tgz",
++      "integrity": "sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==",
++      "license": "MIT"
++    },
+     "node_modules/punycode": {
+       "version": "2.3.1",
+       "license": "MIT",
+@@ -1858,6 +2070,11 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/tslib": {
++      "version": "2.8.1",
++      "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
++      "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
++    },
+     "node_modules/type-is": {
+       "version": "1.6.18",
+       "license": "MIT",
+@@ -1883,7 +2100,6 @@
+     },
+     "node_modules/undici-types": {
+       "version": "6.21.0",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/unpipe": {
+@@ -1946,6 +2162,26 @@
+       "dev": true,
+       "license": "ISC"
+     },
++    "node_modules/ws": {
++      "version": "8.19.0",
++      "resolved": "https://registry.npmjs.org/ws/-/ws-8.19.0.tgz",
++      "integrity": "sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==",
++      "engines": {
++        "node": ">=10.0.0"
++      },
++      "peerDependencies": {
++        "bufferutil": "^4.0.1",
++        "utf-8-validate": ">=5.0.2"
++      },
++      "peerDependenciesMeta": {
++        "bufferutil": {
++          "optional": true
++        },
++        "utf-8-validate": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/xtend": {
+       "version": "4.0.2",
+       "license": "MIT",
+diff --git a/Backend/package.json b/Backend/package.json
+index 55f9aed..d3466d6 100644
+--- a/Backend/package.json
++++ b/Backend/package.json
+@@ -13,6 +13,8 @@
+   "author": "",
+   "license": "ISC",
+   "dependencies": {
++    "@supabase/supabase-js": "^2.90.1",
++    "axios": "^1.13.2",
+     "bcryptjs": "^2.4.3",
+     "cors": "^2.8.5",
+     "dotenv": "^16.4.5",
+diff --git a/Backend/services/recommendationService.js b/Backend/services/recommendationService.js
+new file mode 100644
+index 0000000..3d27712
+--- /dev/null
++++ b/Backend/services/recommendationService.js
+@@ -0,0 +1,120 @@
++"use strict";
++/**
++ * Recommendation Service - Main service for getting outfit recommendations
++ * BACKEND LOGIC - Orchestrates scoring and item selection
++ */
++Object.defineProperty(exports, "__esModule", { value: true });
++exports.recommendationService = void 0;
++const csvParser_1 = require("../core/csvParser");
++const scoringEngine_1 = require("../core/scoringEngine");
++class RecommendationService {
++    constructor() {
++        this.inventory = null;
++        this.scoringEngine = new scoringEngine_1.ScoringEngine();
++    }
++    /**
++     * Load inventory data (cached after first load)
++     */
++    async loadInventory() {
++        if (this.inventory) {
++            return this.inventory;
++        }
++        try {
++            this.inventory = await (0, csvParser_1.loadInventoryFromCSV)();
++            return this.inventory;
++        }
++        catch (error) {
++            console.error("Failed to load inventory:", error);
++            throw new Error("Failed to load inventory data");
++        }
++    }
++    /**
++     * Get top recommendations for each category
++     */
++    async getRecommendations(preferences) {
++        const inventory = await this.loadInventory();
++        console.log(`Loaded ${inventory.length} items from inventory`);
++        console.log("User preferences:", preferences);
++        // Check inventory genders for debugging
++        const genders = [...new Set(inventory.map(item => item.gender))];
++        console.log(`Available genders in inventory: ${genders.join(", ")}`);
++        console.log(`User gender: ${preferences.gender}`);
++        // Score all items - will ALWAYS return items sorted by score (even with low scores)
++        const scoredItems = this.scoringEngine.scoreItems(inventory, preferences);
++        console.log(`Scored ${scoredItems.length} items from ${inventory.length} total items`);
++        // Log top scored items for debugging
++        if (scoredItems.length > 0) {
++            console.log("Top 5 scored items:", scoredItems.slice(0, 5).map(item => ({
++                description: item.description,
++                category: item.category,
++                gender: item.gender,
++                score: item.score.toFixed(2)
++            })));
++        }
++        else {
++            console.error("ERROR: No items scored! This should never happen.");
++        }
++        // ALWAYS get top 4 from each category - even if scores are very low
++        // This ensures we ALWAYS show recommendations as long as items exist in the category
++        const shirts = this.getTopItemsByCategory(scoredItems, ["tshirt", "shirt"], 4);
++        const jackets = this.getTopItemsByCategory(scoredItems, ["jacket", "hoodie", "sweater", "puffer"], 4);
++        const jeans = this.getTopItemsByCategory(scoredItems, ["jean", "pant", "cargo", "trouser"], 4);
++        const shoes = this.getTopItemsByCategory(scoredItems, ["shoe", "sneaker", "oxford"], 4);
++        console.log(`Final Recommendations: ${shirts.length} shirts, ${jackets.length} jackets, ${jeans.length} jeans, ${shoes.length} shoes`);
++        // Log if any category is empty (should help debug)
++        if (shirts.length === 0)
++            console.warn("⚠️ No shirts found in inventory matching keywords: tshirt, shirt");
++        if (jackets.length === 0)
++            console.warn("⚠️ No jackets found in inventory matching keywords: jacket, hoodie, sweater, puffer");
++        if (jeans.length === 0)
++            console.warn("⚠️ No jeans found in inventory matching keywords: jean, pant, cargo, trouser");
++        if (shoes.length === 0)
++            console.warn("⚠️ No shoes found in inventory matching keywords: shoe, sneaker, oxford");
++        return {
++            shirts,
++            jackets,
++            jeans,
++            shoes,
++        };
++    }
++    /**
++     * Get top N items from a specific category
++     * ALWAYS returns top N items if they exist, even if scores are very low
++     * This ensures we never return empty results as long as items exist in the category
++     */
++    getTopItemsByCategory(scoredItems, categoryKeywords, limit) {
++        // Filter items matching this category
++        const filtered = scoredItems.filter(item => {
++            const category = (item.category || "").toLowerCase();
++            const mainCategory = (item.mainCategory || "").toLowerCase();
++            const subCategory = (item.subCategory || "").toLowerCase();
++            // Check if any keyword matches category, mainCategory, or subCategory
++            return categoryKeywords.some(keyword => {
++                const lowerKeyword = keyword.toLowerCase();
++                return (category.includes(lowerKeyword) ||
++                    mainCategory.includes(lowerKeyword) ||
++                    subCategory.includes(lowerKeyword));
++            });
++        });
++        // ALWAYS return top N items if any exist (even if scores are low)
++        // Items are already sorted by score (descending) from scoring engine
++        const result = filtered.slice(0, limit);
++        if (result.length > 0) {
++            const scores = result.map(r => r.score.toFixed(2)).join(', ');
++            console.log(`✓ Category "${categoryKeywords[0]}": Found ${filtered.length} items, returning top ${result.length} (scores: ${scores})`);
++        }
++        else if (filtered.length === 0) {
++            // This means no items in inventory match this category at all
++            console.warn(`✗ Category "${categoryKeywords[0]}": No items found in inventory matching keywords: ${categoryKeywords.join(', ')}`);
++        }
++        return result;
++    }
++    /**
++     * Clear cached inventory (useful for testing or reloading)
++     */
++    clearCache() {
++        this.inventory = null;
++    }
++}
++// Export singleton instance
++exports.recommendationService = new RecommendationService();
+diff --git a/Backend/src/config/database.ts b/Backend/src/config/database.ts
+index f675f10..e0ad654 100644
+--- a/Backend/src/config/database.ts
++++ b/Backend/src/config/database.ts
+@@ -7,7 +7,10 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/fashif
+ 
+ export const connectDatabase = async (): Promise<void> => {
+   try {
+-    await mongoose.connect(MONGODB_URI);
++    await mongoose.connect(MONGODB_URI, {
++      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
++      socketTimeoutMS: 5000,
++    });
+     console.log("✅ Connected to MongoDB");
+   } catch (error) {
+     console.error("❌ MongoDB connection error:", error);
+diff --git a/Backend/src/config/jwt.ts b/Backend/src/config/jwt.ts
+index cf37e3e..6ae11fe 100644
+--- a/Backend/src/config/jwt.ts
++++ b/Backend/src/config/jwt.ts
+@@ -14,7 +14,7 @@ export interface JWTPayload {
+ export const generateToken = (payload: JWTPayload): string => {
+   return jwt.sign(payload, JWT_SECRET, {
+     expiresIn: JWT_EXPIRES_IN,
+-  });
++  } as jwt.SignOptions);
+ };
+ 
+ export const verifyToken = (token: string): JWTPayload => {
+diff --git a/Backend/src/config/supabase.ts b/Backend/src/config/supabase.ts
+index e147efb..bd6a81f 100644
+--- a/Backend/src/config/supabase.ts
++++ b/Backend/src/config/supabase.ts
+@@ -16,9 +16,9 @@ if (!SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_ANON_KEY) {
+ }
+ 
+ // Use service role key for admin operations, fallback to anon key
+-const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
++const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY || "";
+ 
+-export const supabase = createClient(SUPABASE_URL, supabaseKey, {
++export const supabase = createClient(SUPABASE_URL || "", supabaseKey, {
+   auth: {
+     autoRefreshToken: false,
+     persistSession: false
+diff --git a/Backend/src/routes/outfitCombinations.ts b/Backend/src/routes/outfitCombinations.ts
+new file mode 100644
+index 0000000..76cb0fc
+--- /dev/null
++++ b/Backend/src/routes/outfitCombinations.ts
+@@ -0,0 +1,113 @@
++/**
++ * Outfit Combinations Route
++ * POST /api/outfit-combinations
++ * Generates 12 outfit combination images using Gemini AI
++ */
++
++import express, { Response } from 'express';
++import { authenticate, AuthRequest } from '../middleware/auth';
++import { Profile } from '../models/Profile';
++import { outfitCombinationService } from '../services/outfitCombinationService';
++import { imageUrlToBase64 } from '../utils/imageUtils';
++
++const router = express.Router();
++
++/**
++ * POST /api/outfit-combinations
++ * Generate outfit combination images based on selected items
++ * 
++ * Request Body:
++ * {
++ *   selectedItems: {
++ *     shirts: string[],    // Array of styleIds
++ *     jackets: string[],
++ *     jeans: string[],
++ *     shoes: string[]
++ *   }
++ * }
++ */
++router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
++  try {
++    console.log('\n🎨 ===== Outfit Combination Generation Request =====');
++    
++    if (!req.user) {
++      return res.status(401).json({ error: 'Unauthorized' });
++    }
++
++    const userId = req.user.id;
++    const { selectedItems } = req.body;
++
++    // Validate request body
++    if (!selectedItems) {
++      return res.status(400).json({
++        error: 'Missing selectedItems in request body',
++      });
++    }
++
++    if (
++      !Array.isArray(selectedItems.shirts) ||
++      !Array.isArray(selectedItems.jackets) ||
++      !Array.isArray(selectedItems.jeans) ||
++      !Array.isArray(selectedItems.shoes)
++    ) {
++      return res.status(400).json({
++        error: 'Invalid selectedItems format. Expected arrays for shirts, jackets, jeans, and shoes',
++      });
++    }
++
++    console.log(`👤 User ID: ${userId}`);
++    console.log(`📦 Selected items:`, {
++      shirts: selectedItems.shirts.length,
++      jackets: selectedItems.jackets.length,
++      jeans: selectedItems.jeans.length,
++      shoes: selectedItems.shoes.length,
++    });
++
++    // Fetch user's profile to get photo URL
++    const profile = await Profile.findOne({ user_id: userId });
++    if (!profile) {
++      return res.status(404).json({
++        error: 'Profile not found',
++        message: 'Please complete onboarding first',
++      });
++    }
++
++    if (!profile.photo_url) {
++      return res.status(400).json({
++        error: 'User photo not found',
++        message: 'Please upload a photo during onboarding',
++      });
++    }
++
++    console.log(`📸 User photo URL: ${profile.photo_url}`);
++
++    // Convert user photo URL to base64
++    console.log('📥 Converting user photo to base64...');
++    const userImageBase64 = await imageUrlToBase64(profile.photo_url);
++    console.log('✅ User photo converted to base64');
++
++    // Generate outfit combinations
++    console.log('🚀 Starting outfit combination generation...');
++    const results = await outfitCombinationService.generateOutfitCombinations(
++      userImageBase64,
++      selectedItems
++    );
++
++    console.log(`✅ Successfully generated ${results.length} outfit combinations`);
++
++    res.json({
++      message: 'Outfit combinations generated successfully',
++      count: results.length,
++      combinations: results,
++    });
++  } catch (error: any) {
++    console.error('❌ Error generating outfit combinations:', error);
++    res.status(500).json({
++      error: 'Failed to generate outfit combinations',
++      message: error.message,
++    });
++  }
++});
++
++export default router;
++
+diff --git a/Backend/src/server.ts b/Backend/src/server.ts
+index 3f547ed..dd76f1b 100644
+--- a/Backend/src/server.ts
++++ b/Backend/src/server.ts
+@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth";
+ import onboardingRoutes from "./routes/onboarding";
+ import uploadRoutes from "./routes/upload";
+ import recommendationsRoutes from "./routes/recommendations";
++import outfitCombinationsRoutes from "./routes/outfitCombinations";
+ 
+ // Load environment variables
+ dotenv.config();
+@@ -36,6 +37,7 @@ app.use("/api/auth", authRoutes);
+ app.use("/api/onboarding", onboardingRoutes);
+ app.use("/api/upload", uploadRoutes);
+ app.use("/api/recommendations", recommendationsRoutes);
++app.use("/api/outfit-combinations", outfitCombinationsRoutes);
+ 
+ // Error handling middleware
+ app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+diff --git a/Backend/src/services/geminiService.ts b/Backend/src/services/geminiService.ts
+new file mode 100644
+index 0000000..ac7d806
+--- /dev/null
++++ b/Backend/src/services/geminiService.ts
+@@ -0,0 +1,275 @@
++/**
++ * Gemini API Service
++ * Handles all interactions with Google's Gemini API for outfit generation
++ */
++
++import axios from 'axios';
++import dotenv from 'dotenv';
++import { retryWithBackoff } from '../utils/retryUtils';
++
++dotenv.config();
++
++const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0';
++const GEMINI_ACCESS_TOKEN = process.env.GEMINI_ACCESS_TOKEN || '\ya29.a0AUMWg_I5r_bMfjc3obvb34VqD3NYxXRonjaraJviSlBW68YKq_gjQIC12H6b2Kz_nluSw5TbReKS3IYgxxNwD2QjdxRKpqPdkBemPk6I7IjDzK-4WXvO9vkgLEK-X191OzcI2f6i8wwi-ADGwlYuH8jVjiFWJlATFhplw-q9siXSYDBWNqjo5LWWMLF-FKHdrbxDE_NjrAesYgaCgYKAUoSARMSFQHGX2MiQVv4LnHZXN7btHJU8bOpAA0213';
++const GEMINI_BASE_URL = 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models';
++
++export interface OutfitCombination {
++  top_id: string;
++  bottom_id: string;
++  jacket_id: string;
++  shoe_id: string;
++  reasoning: string;
++}
++
++export class GeminiService {
++  /**
++   * Workflow 1: Get 6 outfit combinations from Gemini
++   * Analyzes user image and selects best combinations from inventory
++   */
++  async getOutfitCombinations(
++    userImageBase64: string,
++    inventoryData: string
++  ): Promise<OutfitCombination[]> {
++    console.log('🔄 [Workflow 1] Starting outfit combination generation...');
++    console.log(`📊 Inventory data length: ${inventoryData.length} characters`);
++
++    const url = `${GEMINI_BASE_URL}/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
++    
++    const requestBody = {
++      contents: [
++        {
++          role: 'user',
++          parts: [
++            {
++              inlineData: {
++                mimeType: 'image/jpeg',
++                data: userImageBase64,
++              },
++            },
++            {
++              text: "Act as an AI Stylist. 1. Analyze my photo. 2. Select 2 outfits from the inventory using the styleId. Requirements: Each outfit must have a Top, Bottom, Jacket, and Shoes. Output JSON only.",
++            },
++            {
++              text: `Inventory Data [styleId, Sub_Category, Color, Style_Tag]:\n${inventoryData}`,
++            },
++          ],
++        },
++      ],
++      generationConfig: {
++        responseMimeType: 'application/json',
++        responseSchema: {
++          type: 'ARRAY',
++          items: {
++            type: 'OBJECT',
++            properties: {
++              top_id: {
++                type: 'STRING',
++                description: 'The styleId of the inner top',
++              },
++              bottom_id: {
++                type: 'STRING',
++                description: 'The styleId of the pants',
++              },
++              jacket_id: {
++                type: 'STRING',
++                description: 'The styleId of the outerwear',
++              },
++              shoe_id: {
++                type: 'STRING',
++                description: 'The styleId of the footwear',
++              },
++              reasoning: {
++                type: 'STRING',
++                description: "Brief explanation of why these items work for the user's skin tone and body shape.",
++              },
++            },
++            required: ['top_id', 'bottom_id', 'jacket_id', 'shoe_id', 'reasoning'],
++          },
++        },
++      },
++    };
++
++    return await retryWithBackoff(
++      async () => {
++        console.log('📤 [Workflow 1] Sending request to Gemini API...');
++        const response = await axios.post(url, requestBody, {
++          headers: {
++            'Content-Type': 'application/json',
++            'Authorization': `Bearer ${GEMINI_ACCESS_TOKEN}`,
++          },
++        });
++
++        console.log('✅ [Workflow 1] Received response from Gemini API');
++        
++        const textResponse = response.data.candidates[0]?.content?.parts[0]?.text;
++        if (!textResponse) {
++          throw new Error('No text response from Gemini API');
++        }
++
++        console.log('📝 [Workflow 1] Parsing JSON response...');
++        const combinations: OutfitCombination[] = JSON.parse(textResponse);
++        
++        // Limit to 6 combinations
++        const limitedCombinations = combinations.slice(0, 6);
++        console.log(`✅ [Workflow 1] Successfully parsed ${limitedCombinations.length} outfit combinations`);
++        return limitedCombinations;
++      },
++      {
++        maxRetries: 5,
++        initialDelayMs: 2000, // Start with 2 seconds for rate limits
++        maxDelayMs: 60000, // Max 60 seconds delay
++        backoffMultiplier: 2,
++        retryableStatusCodes: [429, 500, 502, 503, 504],
++      }
++    );
++  }
++
++  /**
++   * Workflow 2: Generate base layer image (user + top + bottom)
++   */
++  async generateBaseLayerImage(
++    userImageBase64: string,
++    topWearImageBase64: string,
++    bottomWearImageBase64: string
++  ): Promise<string> {
++    console.log('🔄 [Workflow 2] Starting base layer image generation...');
++
++    const url = `${GEMINI_BASE_URL}/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
++    
++    const requestBody = {
++      contents: [
++        {
++          role: 'user',
++          parts: [
++            {
++              "text": "IDENTITY & BASE LAYER ANCHOR: Use Image 1 as the master reference for the subject's face, skin texture, and body proportions. 1. SUBJECT IDENTITY: Strictly preserve the unique facial structure, eyes, and skin tone from Image 1—zero beautification or alteration. 2. BASE CLOTHING: Photorealistically wrap the inner top from Image 2 and the bottoms from Image 3 onto the subject's body. The fabric must follow the subject's natural curves and posture, showing realistic folds and tension points. 3. COMPOSITION: Render a full-body portrait against a neutral, high-key studio background to ensure clear lighting on the garments. 4. QUALITY: 8K resolution, sharp focus on fabric weave, and accurate color matching to the garment references."
++            },
++            {
++              inlineData: {
++                mimeType: 'image/jpeg',
++                data: userImageBase64,
++              },
++            },
++            {
++              inlineData: {
++                mimeType: 'image/jpeg',
++                data: bottomWearImageBase64,
++              },
++            },
++            {
++              inlineData: {
++                mimeType: 'image/jpeg',
++                data: topWearImageBase64,
++              },
++            },
++          ],
++        },
++      ],
++    };
++
++    return await retryWithBackoff(
++      async () => {
++        console.log('📤 [Workflow 2] Sending request to Gemini Image API...');
++        const response = await axios.post(url, requestBody, {
++          headers: {
++            'Content-Type': 'application/json',
++            'Authorization': `Bearer ${GEMINI_ACCESS_TOKEN}`,
++          },
++        });
++
++        console.log('✅ [Workflow 2] Received response from Gemini Image API');
++        
++        const generatedImageBase64 = response.data.candidates[0]?.content?.parts[0]?.inlineData?.data;
++        if (!generatedImageBase64) {
++          throw new Error('No image data in response from Gemini Image API');
++        }
++
++        console.log('✅ [Workflow 2] Successfully generated base layer image');
++        return generatedImageBase64;
++      },
++      {
++        maxRetries: 5,
++        initialDelayMs: 3000, // Start with 3 seconds for image generation
++        maxDelayMs: 60000, // Max 60 seconds delay
++        backoffMultiplier: 2,
++        retryableStatusCodes: [429, 500, 502, 503, 504],
++      }
++    );
++  }
++
++  /**
++   * Workflow 3: Generate final image (base layer + jacket + shoes)
++   */
++  async generateFinalImage(
++    baseLayerImageBase64: string,
++    jacketImageBase64: string,
++    shoeImageBase64: string
++  ): Promise<string> {
++    console.log('🔄 [Workflow 3] Starting final image generation...');
++
++    const url = `${GEMINI_BASE_URL}/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
++    
++    const requestBody = {
++      contents: [
++        {
++          role: 'user',
++          parts: [
++            {
++              "text": "FINAL OUTFIT & SCENE INTEGRATION: Use Image 1 (the base fusion) as the subject reference. 1. OUTERWEAR LAYERING: Naturally drape the jacket from Image 2 over the subject's shoulders. The jacket must show depth and volume, with visible shadows where it overlaps the inner shirt. 2. ACCESSORIES: Render the footwear from Image 3 onto the subject's feet with correct ground perspective. 3. ENVIRONMENT: Place the subject in a high-end urban street setting during 'Golden Hour.' Use professional 85mm lens characteristics (shallow depth of field) to blur the background slightly. 4. LIGHTING: Global illumination must be consistent across the subject and the jacket, with soft rim light highlighting the outfit's silhouette. Maintain 100% facial accuracy from the source."
++            },
++            {
++              inlineData: {
++                mimeType: 'image/png',
++                data: baseLayerImageBase64,
++              },
++            },
++            {
++              inlineData: {
++                mimeType: 'image/jpeg',
++                data: jacketImageBase64,
++              },
++            },
++            {
++              inlineData: {
++                mimeType: 'image/jpeg',
++                data: shoeImageBase64,
++              },
++            },
++          ],
++        },
++      ],
++    };
++
++    return await retryWithBackoff(
++      async () => {
++        console.log('📤 [Workflow 3] Sending request to Gemini Image API...');
++        const response = await axios.post(url, requestBody, {
++          headers: {
++            'Content-Type': 'application/json',
++            'Authorization': `Bearer ${GEMINI_ACCESS_TOKEN}`,
++          },
++        });
++
++        console.log('✅ [Workflow 3] Received response from Gemini Image API');
++        
++        const generatedImageBase64 = response.data.candidates[0]?.content?.parts[0]?.inlineData?.data;
++        if (!generatedImageBase64) {
++          throw new Error('No image data in response from Gemini Image API');
++        }
++
++        console.log('✅ [Workflow 3] Successfully generated final image');
++        return generatedImageBase64;
++      },
++      {
++        maxRetries: 5,
++        initialDelayMs: 3000, // Start with 3 seconds for image generation
++        maxDelayMs: 60000, // Max 60 seconds delay
++        backoffMultiplier: 2,
++        retryableStatusCodes: [429, 500, 502, 503, 504],
++      }
++    );
++  }
++}
++
++export const geminiService = new GeminiService();
++
+diff --git a/Backend/src/services/outfitCombinationService.ts b/Backend/src/services/outfitCombinationService.ts
+new file mode 100644
+index 0000000..73d0d4b
+--- /dev/null
++++ b/Backend/src/services/outfitCombinationService.ts
+@@ -0,0 +1,192 @@
++/**
++ * Outfit Combination Service
++ * Orchestrates the three-workflow process for generating outfit combination images
++ */
++
++import { geminiService, OutfitCombination } from './geminiService';
++import { imageUrlToBase64 } from '../utils/imageUtils';
++import { parseImagePayloadCSV, getImageUrlForStyleId } from '../utils/imagePayloadParser';
++import { loadInventoryFromCSV } from '../../core/csvParser';
++import type { InventoryItem } from '../types/inventory';
++
++export interface SelectedItems {
++  shirts: string[]; // Array of styleIds
++  jackets: string[];
++  jeans: string[];
++  shoes: string[];
++}
++
++export interface OutfitCombinationResult {
++  top_id: string;
++  bottom_id: string;
++  jacket_id: string;
++  shoe_id: string;
++  reasoning: string;
++  finalImage: string; // Base64 encoded final image
++  myntraLinks: {
++    top: string;
++    bottom: string;
++    jacket: string;
++    shoe: string;
++  };
++}
++
++export class OutfitCombinationService {
++  private imagePayloadMap: Map<string, string> | null = null;
++
++  /**
++   * Initialize image payload map (cache it)
++   */
++  private async getImagePayloadMap(): Promise<Map<string, string>> {
++    if (!this.imagePayloadMap) {
++      console.log('📂 Loading image payload map from CSV...');
++      this.imagePayloadMap = parseImagePayloadCSV();
++    }
++    return this.imagePayloadMap;
++  }
++
++  /**
++   * Build inventory data string from selected items
++   */
++  private async buildInventoryDataString(selectedItems: SelectedItems): Promise<string> {
++    console.log('📊 Building inventory data string from selected items...');
++    
++    const inventory = await loadInventoryFromCSV();
++    const allStyleIds = new Set([
++      ...selectedItems.shirts,
++      ...selectedItems.jackets,
++      ...selectedItems.jeans,
++      ...selectedItems.shoes,
++    ]);
++
++    const inventoryLines: string[] = [];
++    
++    for (const item of inventory) {
++      if (allStyleIds.has(item.styleId)) {
++        const styleTag = item.styleTags && item.styleTags.length > 0 
++          ? item.styleTags[0] 
++          : 'N/A';
++        inventoryLines.push(
++          `${item.styleId}, ${item.subCategory}, ${item.color}, ${styleTag}`
++        );
++      }
++    }
++
++    const inventoryData = inventoryLines.join('\n');
++    console.log(`✅ Built inventory data string with ${inventoryLines.length} items`);
++    return inventoryData;
++  }
++
++  /**
++   * Get image base64 for a styleId
++   */
++  private async getImageBase64ForStyleId(styleId: string): Promise<string> {
++    const imageMap = await this.getImagePayloadMap();
++    const imageUrl = getImageUrlForStyleId(styleId, imageMap);
++    
++    if (!imageUrl) {
++      throw new Error(`No image URL found for styleId: ${styleId}`);
++    }
++
++    return await imageUrlToBase64(imageUrl);
++  }
++
++  /**
++   * Generate outfit combinations with images
++   * Main entry point that orchestrates all three workflows
++   */
++  async generateOutfitCombinations(
++    userImageBase64: string,
++    selectedItems: SelectedItems
++  ): Promise<OutfitCombinationResult[]> {
++    console.log('🎨 Starting outfit combination generation process...');
++    console.log(`📦 Selected items: ${selectedItems.shirts.length} shirts, ${selectedItems.jackets.length} jackets, ${selectedItems.jeans.length} jeans, ${selectedItems.shoes.length} shoes`);
++
++    try {
++      // Workflow 1: Get 6 outfit combinations from Gemini
++      console.log('\n=== WORKFLOW 1: Getting outfit combinations ===');
++      const inventoryData = await this.buildInventoryDataString(selectedItems);
++      const combinations = await geminiService.getOutfitCombinations(
++        userImageBase64,
++        inventoryData
++      );
++
++      console.log(`✅ Got ${combinations.length} outfit combinations from Gemini`);
++
++      // Process each combination through workflows 2 and 3
++      const results: OutfitCombinationResult[] = [];
++
++      for (let i = 0; i < combinations.length; i++) {
++        const combination = combinations[i];
++        console.log(`\n🔄 Processing combination ${i + 1}/${combinations.length}:`);
++        console.log(`   Top: ${combination.top_id}, Bottom: ${combination.bottom_id}, Jacket: ${combination.jacket_id}, Shoe: ${combination.shoe_id}`);
++
++        try {
++          // Get base64 images for all items
++          console.log(`   📥 Fetching images for items...`);
++          const [topImage, bottomImage, jacketImage, shoeImage] = await Promise.all([
++            this.getImageBase64ForStyleId(combination.top_id),
++            this.getImageBase64ForStyleId(combination.bottom_id),
++            this.getImageBase64ForStyleId(combination.jacket_id),
++            this.getImageBase64ForStyleId(combination.shoe_id),
++          ]);
++
++          // Add delay between API calls to avoid rate limits (2 seconds between combinations)
++          if (i > 0) {
++            console.log(`   ⏳ Waiting 2 seconds before next API call to avoid rate limits...`);
++            await new Promise(resolve => setTimeout(resolve, 2000));
++          }
++
++          // Workflow 2: Generate base layer (user + top + bottom)
++          console.log(`   🎨 [Workflow 2] Generating base layer image...`);
++          const baseLayerImage = await geminiService.generateBaseLayerImage(
++            userImageBase64,
++            topImage,
++            bottomImage
++          );
++
++          // Add delay between workflow 2 and 3
++          console.log(`   ⏳ Waiting 2 seconds before workflow 3...`);
++          await new Promise(resolve => setTimeout(resolve, 2000));
++
++          // Workflow 3: Generate final image (base layer + jacket + shoes)
++          console.log(`   🎨 [Workflow 3] Generating final image...`);
++          const finalImage = await geminiService.generateFinalImage(
++            baseLayerImage,
++            jacketImage,
++            shoeImage
++          );
++
++          results.push({
++            top_id: combination.top_id,
++            bottom_id: combination.bottom_id,
++            jacket_id: combination.jacket_id,
++            shoe_id: combination.shoe_id,
++            reasoning: combination.reasoning,
++            finalImage,
++            myntraLinks: {
++              top: `https://myntra.com/${combination.top_id}`,
++              bottom: `https://myntra.com/${combination.bottom_id}`,
++              jacket: `https://myntra.com/${combination.jacket_id}`,
++              shoe: `https://myntra.com/${combination.shoe_id}`,
++            },
++          });
++
++          console.log(`   ✅ Successfully generated final image for combination ${i + 1}`);
++        } catch (error: any) {
++          console.error(`   ❌ Error processing combination ${i + 1}:`, error.message);
++          // Continue with next combination even if one fails
++        }
++      }
++
++      console.log(`\n✅ Successfully generated ${results.length} outfit combination images`);
++      return results;
++    } catch (error: any) {
++      console.error('❌ Error in generateOutfitCombinations:', error.message);
++      throw error;
++    }
++  }
++}
++
++export const outfitCombinationService = new OutfitCombinationService();
++
+diff --git a/Backend/src/utils/imagePayloadParser.ts b/Backend/src/utils/imagePayloadParser.ts
+new file mode 100644
+index 0000000..f161459
+--- /dev/null
++++ b/Backend/src/utils/imagePayloadParser.ts
+@@ -0,0 +1,88 @@
++/**
++ * Image Payload Parser
++ * Parses the fashifyInventoryImagePayload.csv file to get image URLs for styleIds
++ */
++
++import * as fs from 'fs';
++import * as path from 'path';
++
++export interface StyleImageData {
++  styleId: string;
++  imageUrl: string;
++}
++
++/**
++ * Parse the image payload CSV and return a map of styleId -> default image URL
++ */
++export function parseImagePayloadCSV(): Map<string, string> {
++  // Try multiple possible paths for the CSV file
++  const possiblePaths = [
++    path.join(process.cwd(), 'fashifyInventoryImagePayload.csv'), // When running from Backend folder
++    path.join(process.cwd(), 'Backend', 'fashifyInventoryImagePayload.csv'), // When running from project root
++    path.join(__dirname, '../../fashifyInventoryImagePayload.csv'), // When running from dist
++  ];
++  
++  let csvPath: string | null = null;
++  for (const possiblePath of possiblePaths) {
++    if (fs.existsSync(possiblePath)) {
++      csvPath = possiblePath;
++      break;
++    }
++  }
++  
++  if (!csvPath) {
++    throw new Error(`Could not find fashifyInventoryImagePayload.csv in any of these locations: ${possiblePaths.join(', ')}`);
++  }
++  
++  console.log(`📂 Reading image payload CSV from: ${csvPath}`);
++
++  try {
++    const csvContent = fs.readFileSync(csvPath, 'utf-8');
++    const lines = csvContent.split('\n').filter(line => line.trim());
++    
++    const imageMap = new Map<string, string>();
++    
++    // Skip header row
++    for (let i = 1; i < lines.length; i++) {
++      const line = lines[i];
++      if (!line.trim()) continue;
++
++      // Parse CSV line (handling quoted JSON values)
++      const firstCommaIndex = line.indexOf(',');
++      if (firstCommaIndex === -1) continue;
++
++      const styleId = line.substring(0, firstCommaIndex).trim();
++      const jsonPart = line.substring(firstCommaIndex + 1).trim();
++      
++      try {
++        // Parse the JSON string (it's double-quoted in CSV)
++        const jsonStr = jsonPart.replace(/^"/, '').replace(/"$/, '').replace(/""/g, '"');
++        const styleImages = JSON.parse(jsonStr);
++        
++        // Get the default image URL
++        if (styleImages.default && styleImages.default.imageUrl) {
++          imageMap.set(styleId, styleImages.default.imageUrl);
++          console.log(`✓ Mapped styleId ${styleId} to image URL`);
++        } else {
++          console.warn(`⚠️ StyleId ${styleId} has no default image`);
++        }
++      } catch (parseError) {
++        console.error(`❌ Error parsing JSON for styleId ${styleId}:`, parseError);
++      }
++    }
++
++    console.log(`✅ Parsed ${imageMap.size} styleId-image mappings from CSV`);
++    return imageMap;
++  } catch (error: any) {
++    console.error('❌ Error reading image payload CSV:', error.message);
++    throw new Error(`Failed to parse image payload CSV: ${error.message}`);
++  }
++}
++
++/**
++ * Get image URL for a styleId
++ */
++export function getImageUrlForStyleId(styleId: string, imageMap: Map<string, string>): string | null {
++  return imageMap.get(styleId) || null;
++}
++
+diff --git a/Backend/src/utils/imageUtils.ts b/Backend/src/utils/imageUtils.ts
+new file mode 100644
+index 0000000..7072fe2
+--- /dev/null
++++ b/Backend/src/utils/imageUtils.ts
+@@ -0,0 +1,36 @@
++/**
++ * Image Utility Functions
++ * Handles image URL fetching and base64 conversion
++ */
++
++import axios from 'axios';
++
++/**
++ * Fetch image from URL and convert to base64
++ */
++export async function imageUrlToBase64(imageUrl: string): Promise<string> {
++  try {
++    console.log(`📥 Fetching image from URL: ${imageUrl}`);
++    const response = await axios.get(imageUrl, {
++      responseType: 'arraybuffer',
++      timeout: 30000, // 30 second timeout
++    });
++
++    const buffer = Buffer.from(response.data, 'binary');
++    const base64 = buffer.toString('base64');
++    
++    console.log(`✅ Successfully converted image to base64 (${base64.length} chars)`);
++    return base64;
++  } catch (error: any) {
++    console.error(`❌ Error fetching image from ${imageUrl}:`, error.message);
++    throw new Error(`Failed to fetch image: ${error.message}`);
++  }
++}
++
++/**
++ * Convert base64 string to data URL
++ */
++export function base64ToDataUrl(base64: string, mimeType: string = 'image/png'): string {
++  return `data:${mimeType};base64,${base64}`;
++}
++
+diff --git a/Backend/src/utils/retryUtils.ts b/Backend/src/utils/retryUtils.ts
+new file mode 100644
+index 0000000..9d62a45
+--- /dev/null
++++ b/Backend/src/utils/retryUtils.ts
+@@ -0,0 +1,95 @@
++/**
++ * Retry Utility Functions
++ * Handles retry logic with exponential backoff for API calls
++ */
++
++export interface RetryOptions {
++  maxRetries?: number;
++  initialDelayMs?: number;
++  maxDelayMs?: number;
++  backoffMultiplier?: number;
++  retryableStatusCodes?: number[];
++}
++
++const DEFAULT_OPTIONS: Required<RetryOptions> = {
++  maxRetries: 3,
++  initialDelayMs: 1000, // 1 second
++  maxDelayMs: 30000, // 30 seconds
++  backoffMultiplier: 2,
++  retryableStatusCodes: [429, 500, 502, 503, 504], // Rate limit and server errors
++};
++
++/**
++ * Sleep for specified milliseconds
++ */
++function sleep(ms: number): Promise<void> {
++  return new Promise(resolve => setTimeout(resolve, ms));
++}
++
++/**
++ * Check if error is retryable based on status code
++ */
++function isRetryableError(error: any, retryableStatusCodes: number[]): boolean {
++  if (!error.response) {
++    // Network errors are retryable
++    return true;
++  }
++  
++  const statusCode = error.response.status;
++  return retryableStatusCodes.includes(statusCode);
++}
++
++/**
++ * Calculate delay with exponential backoff
++ */
++function calculateDelay(attempt: number, options: Required<RetryOptions>): number {
++  const delay = options.initialDelayMs * Math.pow(options.backoffMultiplier, attempt);
++  return Math.min(delay, options.maxDelayMs);
++}
++
++/**
++ * Retry a function with exponential backoff
++ * 
++ * @param fn - Function to retry
++ * @param options - Retry configuration options
++ * @returns Result of the function
++ */
++export async function retryWithBackoff<T>(
++  fn: () => Promise<T>,
++  options: RetryOptions = {}
++): Promise<T> {
++  const config = { ...DEFAULT_OPTIONS, ...options };
++  let lastError: any;
++
++  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
++    try {
++      return await fn();
++    } catch (error: any) {
++      lastError = error;
++
++      // Check if we should retry
++      if (attempt === config.maxRetries) {
++        console.error(`❌ Max retries (${config.maxRetries}) exceeded`);
++        throw error;
++      }
++
++      // Check if error is retryable
++      if (!isRetryableError(error, config.retryableStatusCodes)) {
++        console.error(`❌ Error is not retryable (status: ${error.response?.status})`);
++        throw error;
++      }
++
++      const delay = calculateDelay(attempt, config);
++      const statusCode = error.response?.status || 'network error';
++      
++      console.warn(
++        `⚠️ Retry attempt ${attempt + 1}/${config.maxRetries} after ${delay}ms (status: ${statusCode})`
++      );
++      
++      await sleep(delay);
++    }
++  }
++
++  throw lastError;
++}
++
+diff --git a/Backend/tsconfig.json b/Backend/tsconfig.json
+index 9324b7c..93130e6 100644
+--- a/Backend/tsconfig.json
++++ b/Backend/tsconfig.json
+@@ -4,7 +4,6 @@
+     "module": "commonjs",
+     "lib": ["ES2020"],
+     "outDir": "./dist",
+-    "rootDir": "./src",
+     "strict": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+@@ -17,6 +16,6 @@
+       "@/*": ["./src/*"]
+     }
+   },
+-  "include": ["src/**/*"],
++  "include": ["src/**/*", "core/**/*", "services/**/*"],
+   "exclude": ["node_modules", "dist"]
+ }
+diff --git a/FrontEnd/src/App.tsx b/FrontEnd/src/App.tsx
+index e720d15..68830b8 100644
+--- a/FrontEnd/src/App.tsx
++++ b/FrontEnd/src/App.tsx
+@@ -10,6 +10,7 @@ import Login from "./pages/Login";
+ import Onboarding from "./pages/Onboarding";
+ import ItemSelection from "./pages/ItemSelection";
+ import Suggestions from "./pages/Suggestions";
++import OutfitCombinations from "./pages/OutfitCombinations";
+ import NotFound from "./pages/NotFound";
+ 
+ const queryClient = new QueryClient();
+@@ -28,6 +29,7 @@ const App = () => (
+             <Route path="/onboarding" element={<Onboarding />} />
+             <Route path="/selection" element={<ItemSelection />} />
+             <Route path="/suggestions" element={<Suggestions />} />
++            <Route path="/outfit-combinations" element={<OutfitCombinations />} />
+             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+             <Route path="*" element={<NotFound />} />
+           </Routes>
+diff --git a/FrontEnd/src/pages/ItemSelection.tsx b/FrontEnd/src/pages/ItemSelection.tsx
+index 2ca07a0..e3433ca 100644
+--- a/FrontEnd/src/pages/ItemSelection.tsx
++++ b/FrontEnd/src/pages/ItemSelection.tsx
+@@ -131,8 +131,17 @@ const ItemSelection = () => {
+     if (currentCategoryIndex < CATEGORIES.length - 1) {
+       setCurrentCategoryIndex(currentCategoryIndex + 1);
+     } else {
+-      // All categories done - navigate to suggestions
+-      navigate("/suggestions");
++      // All categories done - prepare selected items and navigate to outfit combinations
++      const selectedItems = {
++        shirts: Array.from(selections.shirts),
++        jackets: Array.from(selections.outerwear), // outerwear maps to jackets
++        jeans: Array.from(selections.bottomwear), // bottomwear maps to jeans
++        shoes: Array.from(selections.footwear),
++      };
++      
++      // Store selections in sessionStorage to pass to next page
++      sessionStorage.setItem('selectedItems', JSON.stringify(selectedItems));
++      navigate("/outfit-combinations");
+     }
+   };
+ 
+diff --git a/FrontEnd/src/pages/OutfitCombinations.tsx b/FrontEnd/src/pages/OutfitCombinations.tsx
+new file mode 100644
+index 0000000..06df6e0
+--- /dev/null
++++ b/FrontEnd/src/pages/OutfitCombinations.tsx
+@@ -0,0 +1,281 @@
++import { useState, useEffect } from "react";
++import { useNavigate } from "react-router-dom";
++import { motion } from "framer-motion";
++import { Button } from "@/components/ui/button";
++import { ArrowLeft, LogOut, ExternalLink, Loader2 } from "lucide-react";
++import { useAuth } from "@/hooks/useAuth";
++import { toast } from "@/hooks/use-toast";
++
++interface SelectedItems {
++  shirts: string[];
++  jackets: string[];
++  jeans: string[];
++  shoes: string[];
++}
++
++interface OutfitCombination {
++  top_id: string;
++  bottom_id: string;
++  jacket_id: string;
++  shoe_id: string;
++  reasoning: string;
++  finalImage: string;
++  myntraLinks: {
++    top: string;
++    bottom: string;
++    jacket: string;
++    shoe: string;
++  };
++}
++
++interface OutfitCombinationsResponse {
++  message: string;
++  count: number;
++  combinations: OutfitCombination[];
++}
++
++const OutfitCombinations = () => {
++  const navigate = useNavigate();
++  const { user, loading: authLoading, signOut } = useAuth();
++  const [loading, setLoading] = useState(false);
++  const [generating, setGenerating] = useState(false);
++  const [combinations, setCombinations] = useState<OutfitCombination[]>([]);
++  const [selectedItems, setSelectedItems] = useState<SelectedItems | null>(null);
++
++  useEffect(() => {
++    if (!authLoading && !user) {
++      navigate("/login");
++      return;
++    }
++
++    // Get selected items from sessionStorage
++    const stored = sessionStorage.getItem('selectedItems');
++    if (stored) {
++      try {
++        const items = JSON.parse(stored);
++        setSelectedItems(items);
++        generateOutfitCombinations(items);
++      } catch (error) {
++        console.error("Error parsing selected items:", error);
++        toast({
++          title: "Error",
++          description: "Failed to load selected items. Please go back and select items again.",
++          variant: "destructive",
++        });
++        navigate("/selection");
++      }
++    } else {
++      toast({
++        title: "No selections found",
++        description: "Please select items first.",
++        variant: "destructive",
++      });
++      navigate("/selection");
++    }
++  }, [user, authLoading, navigate]);
++
++  const generateOutfitCombinations = async (items: SelectedItems) => {
++    if (!user) return;
++
++    setGenerating(true);
++    setLoading(true);
++
++    try {
++      const token = localStorage.getItem('auth_token');
++      if (!token) {
++        throw new Error("No authentication token found");
++      }
++
++      const response = await fetch('http://localhost:3000/api/outfit-combinations', {
++        method: 'POST',
++        headers: {
++          'Content-Type': 'application/json',
++          'Authorization': `Bearer ${token}`,
++        },
++        body: JSON.stringify({
++          selectedItems: items,
++        }),
++      });
++
++      if (!response.ok) {
++        const errorData = await response.json();
++        throw new Error(errorData.message || 'Failed to generate outfit combinations');
++      }
++
++      const data: OutfitCombinationsResponse = await response.json();
++      setCombinations(data.combinations);
++      
++      toast({
++        title: "Success!",
++        description: `Generated ${data.count} outfit combinations`,
++      });
++    } catch (error: any) {
++      console.error("Error generating outfit combinations:", error);
++      toast({
++        title: "Error",
++        description: error.message || "Failed to generate outfit combinations. Please try again.",
++        variant: "destructive",
++      });
++    } finally {
++      setGenerating(false);
++      setLoading(false);
++    }
++  };
++
++  const handleSignOut = async () => {
++    await signOut();
++    navigate("/");
++  };
++
++  const handleRetry = () => {
++    if (selectedItems) {
++      generateOutfitCombinations(selectedItems);
++    }
++  };
++
++  if (authLoading || loading) {
++    return (
++      <div className="min-h-screen bg-background flex items-center justify-center">
++        <div className="text-center">
++          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
++          <p className="text-muted-foreground">
++            {generating ? "Generating your outfit combinations..." : "Loading..."}
++          </p>
++          {generating && (
++            <p className="text-sm text-muted-foreground mt-2">
++              This may take a few minutes...
++            </p>
++          )}
++        </div>
++      </div>
++    );
++  }
++
++  return (
++    <div className="min-h-screen bg-background flex flex-col">
++      {/* Header */}
++      <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md border-b border-border/50 z-50">
++        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
++          <div className="flex items-center gap-4">
++            <Button
++              variant="ghost"
++              size="icon"
++              onClick={() => navigate("/selection")}
++            >
++              <ArrowLeft className="w-4 h-4" />
++            </Button>
++            <h1 className="text-xl font-semibold">Your Outfit Combinations</h1>
++          </div>
++          <Button variant="ghost" size="sm" onClick={handleSignOut}>
++            <LogOut className="w-4 h-4 mr-2" />
++            Sign out
++          </Button>
++        </div>
++      </header>
++
++      {/* Main Content */}
++      <main className="flex-1 container mx-auto px-6 pt-24 pb-32">
++        {combinations.length === 0 && !generating ? (
++          <div className="text-center py-12">
++            <p className="text-muted-foreground mb-4">No outfit combinations generated yet.</p>
++            <Button onClick={handleRetry}>Generate Outfits</Button>
++          </div>
++        ) : (
++          <>
++            <div className="mb-8 text-center">
++              <h2 className="text-2xl font-semibold mb-2">
++                {combinations.length} Outfit Combinations
++              </h2>
++              <p className="text-muted-foreground">
++                AI-generated outfits tailored to your style and body type
++              </p>
++            </div>
++
++            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
++              {combinations.map((combination, index) => (
++                <motion.div
++                  key={`${combination.top_id}-${combination.bottom_id}-${combination.jacket_id}-${combination.shoe_id}`}
++                  initial={{ opacity: 0, y: 20 }}
++                  animate={{ opacity: 1, y: 0 }}
++                  transition={{ delay: index * 0.1 }}
++                  className="bg-card rounded-lg border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow"
++                >
++                  {/* Generated Image */}
++                  <div className="relative aspect-[3/4] bg-muted">
++                    <img
++                      src={`data:image/png;base64,${combination.finalImage}`}
++                      alt={`Outfit combination ${index + 1}`}
++                      className="w-full h-full object-cover"
++                    />
++                  </div>
++
++                  {/* Combination Details */}
++                  <div className="p-4">
++                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
++                      {combination.reasoning}
++                    </p>
++
++                    {/* Style IDs */}
++                    <div className="mb-3 space-y-1">
++                      <div className="text-xs text-muted-foreground">
++                        <span className="font-medium">Top:</span> {combination.top_id}
++                      </div>
++                      <div className="text-xs text-muted-foreground">
++                        <span className="font-medium">Bottom:</span> {combination.bottom_id}
++                      </div>
++                      <div className="text-xs text-muted-foreground">
++                        <span className="font-medium">Jacket:</span> {combination.jacket_id}
++                      </div>
++                      <div className="text-xs text-muted-foreground">
++                        <span className="font-medium">Shoes:</span> {combination.shoe_id}
++                      </div>
++                    </div>
++
++                    {/* Myntra Links */}
++                    <div className="flex flex-wrap gap-2">
++                      <Button
++                        variant="outline"
++                        size="sm"
++                        className="text-xs"
++                        onClick={() => window.open(combination.myntraLinks.top, '_blank')}
++                      >
++                        Top <ExternalLink className="w-3 h-3 ml-1" />
++                      </Button>
++                      <Button
++                        variant="outline"
++                        size="sm"
++                        className="text-xs"
++                        onClick={() => window.open(combination.myntraLinks.bottom, '_blank')}
++                      >
++                        Bottom <ExternalLink className="w-3 h-3 ml-1" />
++                      </Button>
++                      <Button
++                        variant="outline"
++                        size="sm"
++                        className="text-xs"
++                        onClick={() => window.open(combination.myntraLinks.jacket, '_blank')}
++                      >
++                        Jacket <ExternalLink className="w-3 h-3 ml-1" />
++                      </Button>
++                      <Button
++                        variant="outline"
++                        size="sm"
++                        className="text-xs"
++                        onClick={() => window.open(combination.myntraLinks.shoe, '_blank')}
++                      >
++                        Shoes <ExternalLink className="w-3 h-3 ml-1" />
++                      </Button>
++                    </div>
++                  </div>
++                </motion.div>
++              ))}
++            </div>
++          </>
++        )}
++      </main>
++    </div>
++  );
++};
++
++export default OutfitCombinations;
++
+diff --git a/install-mongodb.sh b/install-mongodb.sh
+new file mode 100755
+index 0000000..8b13789
+--- /dev/null
++++ b/install-mongodb.sh
+@@ -0,0 +1 @@
++
+-- 
+2.39.5 (Apple Git-154)
+

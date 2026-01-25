@@ -2,6 +2,7 @@ i'm now planning to enhance the features in this service
 so basically after /api/recommendations call
 we will get 4 items from each category
 post that there is some code is already written to select atleast two items from each category (check it once)
+although it's not working in the end all 4 from each category is visible
 now with at max 4 selected items from each category we will make further call to backend to serve it for new page
 below are the details of new page and also the api endpoint that you need to implement
 maybe you can use styleID for uniqely identifying the data
@@ -23,7 +24,7 @@ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashi
                 {
                     "inlineData": {
                         "mimeType": "image/jpeg",
-                        "data": "BASE64_IMAGE"
+                        "data": "BASE64_USER_IMAGE"
                     }
                 },
                 {
@@ -76,7 +77,7 @@ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashi
 }'
 -------------------------------------------------------
 for inventroy use this csv file Backend/Item-attributes.csv and add base64 image of user
-
+for user image take it from db it should be present there
 response of this endpoint will be like this
 {
     "candidates": [
@@ -129,13 +130,13 @@ useful data is inside "content": {
 
 part
 
-now this data (payload) is being used to execute second workflow
-for each combination (4 items) execute workflow 2 and workflow 3
+now this data (payload) is being used to execute second part of workflow
+for each combination (4 items) execute workflow part 2 and workflow part 3
 
 2. second part of workflow
 
 curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashify-484620/locations/us-central1/publishers/google/models/gemini-2.5-flash-image:generateContent?key=AIzaSyBMaNJweJZPNW6qPeV2jD6aXdAEM-5D9k0' \
---header 'Authorization: Bearer ya29.a0AUMWg_KLCUBXU4IGf6iqtQHgjWrQGoMCKUGyhaXB51RZRbfltlVH7nytY3qEDU5SrmbpKNNOD_KSGUixsqlNIWGsbfhOYYoEWepsrqHOCLAibOCAPbZ8VQXHQzg72NaF74klrwvSLK3q5dmFqUdjhJNfUCvkK_-idyL7s99Wdyt7R5ANC1V_q38N5gsU2pzNUqlaVR94n2KrwQaCgYKAa0SARMSFQHGX2Mieeuiursn7dmRa0TRKktJHQ0213' \
+--header 'Authorization: Bearer ya29.a0AUMWg_JPtA08ppu3QYWaWSiVLfTIqNKUPKwA82r0d7ZyIIZxDKSeQ6TCCk5wQFFQqNw4RI61dDzRRdsLjIhSvWd5FPpMH-m4WgeuyhiTX3ilkwByGclsHuG1VnnhmjI2yVS0sN8lFA_nH2G-JIadfZ864TkMZUYw5eWwr59T8aFB63g5PY3hp0YFeR_OjrqXPdoFIn3LM2v8hgaCgYKAQASARMSFQHGX2MiolTDcL2XgkxOdenXiV8Jtg0213' \
 --header 'Content-Type: application/json' \
 --data '{
     "contents": [
@@ -168,7 +169,7 @@ curl --location 'https://us-central1-aiplatform.googleapis.com/v1/projects/fashi
     ]
 }'
 
-use user image, top wear and bottom wear (base 64) in this prompt
+use user image (from database), top wear and bottom wear (base 64) in this prompt
 ----------------------response of this api will be like this ------------
  {
   "candidates": [
@@ -241,7 +242,7 @@ make UI clean and intutive
 
 add logs at each step so that it will be easy for debugging purposes
 
-for images for a style there is one csv file it has payload like this
+for images for a style there is one csv file it has payload like this against each styleID
 
 {
   "back": {
@@ -297,6 +298,6 @@ for images for a style there is one csv file it has payload like this
 use 
 "default": {
     "imageUrl": 
-from this for all usecased in api payload
+from this for all usecases (default will always present) in api payload against styleID
 
 @Backend/fashifyInventoryImagePayload.csv 

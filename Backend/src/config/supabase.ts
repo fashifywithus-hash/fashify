@@ -16,9 +16,9 @@ if (!SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_ANON_KEY) {
 }
 
 // Use service role key for admin operations, fallback to anon key
-const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY || "";
 
-export const supabase = createClient(SUPABASE_URL, supabaseKey, {
+export const supabase = createClient(SUPABASE_URL || "", supabaseKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false

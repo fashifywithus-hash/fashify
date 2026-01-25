@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth";
 import onboardingRoutes from "./routes/onboarding";
 import uploadRoutes from "./routes/upload";
 import recommendationsRoutes from "./routes/recommendations";
+import outfitCombinationsRoutes from "./routes/outfitCombinations";
 
 // Load environment variables
 dotenv.config();
@@ -36,6 +37,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
+app.use("/api/outfit-combinations", outfitCombinationsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
