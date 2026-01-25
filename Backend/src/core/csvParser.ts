@@ -5,7 +5,7 @@
 
 import fs from "fs";
 import path from "path";
-import type { InventoryItem } from "../src/types/inventory";
+import type { InventoryItem } from "../types/inventory";
 
 /**
  * Parse CSV content into InventoryItem array
