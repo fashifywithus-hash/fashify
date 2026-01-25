@@ -3,7 +3,7 @@
  * BACKEND LOGIC - Core scoring algorithm
  */
 
-import type { InventoryItem, UserPreferences, ScoredItem } from "@/types/inventory";
+import type { InventoryItem, UserPreferences, ScoredItem } from "../types/inventory";
 
 export class ScoringEngine {
   /**

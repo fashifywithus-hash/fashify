@@ -1,7 +1,7 @@
 import express, { Response } from "express";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { Profile } from "../models/Profile";
-import { recommendationService } from "../../services/recommendationService";
+import { recommendationService } from "../services/recommendationService";
 import type { UserPreferences } from "../types/inventory";
 
 const router = express.Router();
