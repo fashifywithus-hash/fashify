@@ -1,0 +1,62 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output (will be built in Docker)
+dist
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+*.test.js
+*.spec.js
+
+# Documentation
+*.md
+!README.md
+
+# Elastic Beanstalk
+.elasticbeanstalk
+.ebextensions
+.ebignore
+
+# Logs
+logs
+*.log
+
+# Images (if not needed in container)
+images/*.jpg
+images/*.jpeg
+images/*.png
+images/*.b64
+
+# CSV files (if not needed in container)
+# Exception: Item-attributes.csv is needed for recommendations
+*.csv
+!Item-attributes.csv
+
+# Test files
+test-*.js
+test-*.sh
