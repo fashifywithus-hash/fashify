@@ -17,6 +17,7 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 // CORS configuration - support multiple origins in production
 const getCorsOrigin = (): string | string[] => {
   const frontendUrl = process.env.FRONTEND_URL;
+  const isDevelopment = process.env.NODE_ENV !== "production";
   
   if (!frontendUrl) {
     if (process.env.NODE_ENV === "production") {
@@ -25,7 +26,22 @@ const getCorsOrigin = (): string | string[] => {
     return "http://localhost:8080"; // Default for development
   }
 
-  // Support multiple origins (comma-separated)
+  // In development, always allow localhost origins even if FRONTEND_URL is set to production
+  // This allows local development while keeping production URL in .env
+  if (isDevelopment) {
+    const origins: string[] = ["http://localhost:8080", "http://127.0.0.1:8080"];
+    
+    // Support multiple origins (comma-separated)
+    if (frontendUrl.includes(",")) {
+      origins.push(...frontendUrl.split(",").map(url => url.trim()));
+    } else {
+      origins.push(frontendUrl);
+    }
+    
+    return origins;
+  }
+
+  // In production, support multiple origins (comma-separated)
   if (frontendUrl.includes(",")) {
     return frontendUrl.split(",").map(url => url.trim());
   }
