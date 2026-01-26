@@ -29,3 +29,8 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 uploads/
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

@@ -1,0 +1,29 @@
+# Exclude docker-compose.yml from EB deployment
+# EB uses Dockerrun.aws.json for Docker deployments
+docker-compose.yml
+
+# Exclude development files
+.env
+.env.local
+*.log
+
+# Exclude build artifacts (will be built in Docker)
+dist
+node_modules
+
+# Exclude test files
+test-*.js
+test-*.sh
+*.test.js
+*.spec.js
+
+# Exclude images
+images/*.jpg
+images/*.jpeg
+images/*.png
+images/*.b64
+
+# Exclude CSV files
+# Exception: Item-attributes.csv is needed for recommendations
+*.csv
+!Item-attributes.csv
