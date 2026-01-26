@@ -8,9 +8,10 @@ interface SelectableImageCardProps {
   item: ScoredItem;
   isSelected: boolean;
   onToggle: () => void;
+  showCheckmark?: boolean; // Optional prop to show/hide checkmark
 }
 
-export const SelectableImageCard = ({ item, isSelected, onToggle }: SelectableImageCardProps) => {
+export const SelectableImageCard = ({ item, isSelected, onToggle, showCheckmark = true }: SelectableImageCardProps) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -86,7 +87,7 @@ export const SelectableImageCard = ({ item, isSelected, onToggle }: SelectableIm
       )}
 
       {/* Selection Tick Mark */}
-      {isSelected && (
+      {isSelected && showCheckmark && (
         <motion.div
           className="absolute top-2 right-2 w-6 h-6 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center"
           initial={{ scale: 0, opacity: 0 }}

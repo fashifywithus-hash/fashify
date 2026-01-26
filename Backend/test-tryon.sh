@@ -4,8 +4,8 @@
 # This script demonstrates how to test the try-on endpoint
 
 BASE_URL="http://localhost:3000"
-EMAIL="test@gmail.com"
-PASSWORD="test123456"
+EMAIL="priyanshbarya@gmail.com"
+PASSWORD="123456"
 
 echo "🧪 Testing Try-On API Endpoint"
 echo "================================"

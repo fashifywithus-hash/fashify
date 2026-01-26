@@ -52,7 +52,7 @@ const getCorsOrigin = (): string | string[] => {
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:8080",
+  origin: getCorsOrigin(),
   credentials: true
 }));
 // Increase body size limit to handle base64 images (50MB limit)
