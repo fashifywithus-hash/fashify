@@ -13,9 +13,9 @@ import { StyleStep } from "@/components/onboarding/steps/StyleStep";
 import { PhotoUploadStep } from "@/components/onboarding/steps/PhotoUploadStep";
 import { useAuth } from "@/hooks/useAuth";
 import { profileService } from "@/services/profileService";
+import { uploadService } from "@/services/uploadService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { fileToDataURL } from "@/utils/imageUtils";
 
 interface OnboardingData {
   name: string;
@@ -26,8 +26,7 @@ interface OnboardingData {
   height: number;
   skinTone: number;
   styles: string[];
-  photo: File | null; // File object for preview
-  photoUrl: string | null; // Base64 data URL for storage
+  photo: File | null; // File object for upload
 }
 
 const TOTAL_STEPS = 9;
@@ -48,7 +47,6 @@ const Onboarding = () => {
     skinTone: 50,
     styles: [],
     photo: null,
-    photoUrl: null,
   });
 
   useEffect(() => {
@@ -57,21 +55,8 @@ const Onboarding = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Convert photo to base64 when it's uploaded
-  useEffect(() => {
-    if (data.photo && data.photo instanceof File && !data.photoUrl) {
-      console.log("🔄 Auto-converting photo to base64...");
-      fileToDataURL(data.photo)
-        .then((photoUrl) => {
-          console.log("✅ Photo auto-converted, length:", photoUrl.length);
-          setData((prev) => ({ ...prev, photoUrl }));
-        })
-        .catch((error) => {
-          console.error("❌ Error auto-converting photo:", error);
-          setData((prev) => ({ ...prev, photoUrl: null }));
-        });
-    }
-  }, [data.photo]);
+  // Note: We no longer auto-convert photos to base64
+  // Photos will be uploaded separately via the upload endpoint
 
   const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
@@ -96,7 +81,7 @@ const Onboarding = () => {
       case 8:
         return data.styles.length > 0;
       case 9:
-        return data.photo !== null || data.photoUrl !== null;
+        return data.photo !== null;
       default:
         return false;
     }
@@ -108,34 +93,31 @@ const Onboarding = () => {
     setIsSaving(true);
 
     try {
-      // Use the pre-converted photoUrl if available, otherwise try to convert
-      let photoUrl: string | null = data.photoUrl;
-      
-      // If we have a photo but no photoUrl, convert it now
-      if (!photoUrl && data.photo && data.photo instanceof File) {
+      let photoUrl: string | null = null;
+
+      // Upload photo separately if it exists
+      if (data.photo && data.photo instanceof File) {
         try {
-          console.log("🔄 Converting photo to base64 on save...", {
+          console.log("📤 Uploading photo...", {
             name: data.photo.name,
-            size: data.photo.size
+            size: data.photo.size,
+            type: data.photo.type
           });
-          photoUrl = await fileToDataURL(data.photo);
-          console.log("✅ Photo converted, length:", photoUrl.length);
-        } catch (error) {
-          console.error("❌ Error converting photo:", error);
+          
+          photoUrl = await uploadService.uploadPhoto(data.photo);
+          console.log("✅ Photo uploaded successfully");
+        } catch (error: any) {
+          console.error("❌ Error uploading photo:", error);
           toast({
-            title: "Photo conversion error",
-            description: "Could not process the photo. Saving profile without photo.",
+            title: "Photo upload error",
+            description: error.message || "Could not upload the photo. Saving profile without photo.",
             variant: "destructive",
           });
+          // Continue without photo - don't block profile creation
         }
       }
 
-      console.log("📤 Photo URL status:", {
-        hasPhotoFile: !!data.photo,
-        hasPhotoUrl: !!photoUrl,
-        photoUrlLength: photoUrl?.length || 0
-      });
-
+      // Prepare profile data (without large base64 strings)
       const profileData: any = {
         name: data.name,
         gender: data.gender,
@@ -145,12 +127,12 @@ const Onboarding = () => {
         height: data.height,
         skin_tone: data.skinTone,
         preferred_styles: data.styles,
-        photo_url: photoUrl, // Include photo_url (can be null)
+        photo_url: photoUrl, // Use uploaded photo URL (can be null)
       };
 
       console.log("📤 Sending profile data to backend:", {
         ...profileData,
-        photo_url: photoUrl ? `[base64 data, ${photoUrl.length} chars]` : null
+        photo_url: photoUrl ? "[uploaded]" : null
       });
       
       await profileService.saveProfile(profileData);
