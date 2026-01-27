@@ -1,12 +1,12 @@
 #!/bin/bash
-# Tail API logs in real-time from CloudWatch
+# Tail all logs in real-time from CloudWatch
 # Usage: ./tail-api-logs.sh [environment-name]
 
 ENVIRONMENT=${1:-production}
 REGION=${AWS_REGION:-us-east-1}
 LOG_GROUP="/aws/elasticbeanstalk/$ENVIRONMENT/var/log/eb-docker/containers/eb-current-app/stdouterr.log"
 
-echo "🔍 Tailing API logs from CloudWatch for: $ENVIRONMENT"
+echo "🔍 Tailing all logs from CloudWatch for: $ENVIRONMENT"
 echo "📡 Log Group: $LOG_GROUP"
 echo "Press Ctrl+C to stop"
 echo "----------------------------------------"
@@ -52,17 +52,11 @@ if [ -z "$LOG_GROUP_EXISTS" ]; then
     fi
 fi
 
-echo "✅ Found log group. Tailing logs (filtering for API calls)..."
+echo "✅ Found log group. Tailing all logs in real-time..."
 echo ""
 
-# Tail the log group and filter for API-related content
+# Tail the log group and show all logs
 aws logs tail "$LOG_GROUP" \
     --follow \
     --region $REGION \
-    --format short 2>&1 | \
-    grep --line-buffered -E "API Request|API Response|📥|📤|POST|GET|PUT|DELETE|/api/" || \
-    # If no matches, show all logs
-    aws logs tail "$LOG_GROUP" \
-        --follow \
-        --region $REGION \
-        --format short
+    --format short

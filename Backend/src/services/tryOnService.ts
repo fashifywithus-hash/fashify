@@ -19,21 +19,67 @@ interface TryOnRequest {
 
 class TryOnService {
   private inventory: InventoryItem[] | null = null;
-
-  /**
-   * Initialize Gemini client
-   */
   private getClient() {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "fashify-484620";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
+    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    const credentialsJson = process.env.GOOGLE_CREDENTIALS;
 
-    logger.info("Initializing Gemini client", { projectId, location });
+    logger.info("Initializing Gemini client", { 
+      projectId, 
+      location,
+      hasCredentialsPath: !!credentialsPath,
+      hasCredentialsJson: !!credentialsJson
+    });
+    try {
+      if (credentialsJson && !credentialsPath) {
+        try {
+          const credentials = JSON.parse(credentialsJson);
+          const tempDir = path.join(process.cwd(), "tmp");
+          if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+          }
 
-    return new GoogleGenAI({
+          const tempCredentialsPath = path.join(tempDir, "google-credentials.json");
+          fs.writeFileSync(tempCredentialsPath, credentialsJson, "utf8");
+
+          process.env.GOOGLE_APPLICATION_CREDENTIALS = tempCredentialsPath;
+          
+          logger.info("Credentials loaded from GOOGLE_CREDENTIALS and written to temp file", {
+            tempPath: tempCredentialsPath
+          });
+        } catch (parseError: any) {
+          logger.error("Failed to parse GOOGLE_CREDENTIALS JSON", { error: parseError.message });
+          throw new Error(`Invalid GOOGLE_CREDENTIALS JSON: ${parseError.message}`);
+        }
+      }
+
+      if (credentialsPath) {
+        if (fs.existsSync(credentialsPath)) {
+          logger.info("Using credentials from file", { path: credentialsPath });
+        } else {
+          logger.error("Credentials file not found", { path: credentialsPath });
+          throw new Error(`Google Cloud credentials file not found: ${credentialsPath}`);
+        }
+      }
+
+      if (!credentialsPath && !credentialsJson) {
+        logger.info("No Google Cloud credentials provided. Attempting to use Application Default Credentials (ADC).");
+        logger.info("If running outside GCP, you must set either:");
+        logger.info("  - GOOGLE_APPLICATION_CREDENTIALS (path to service account key file), or");
+        logger.info("  - GOOGLE_CREDENTIALS (JSON string of service account credentials)");
+      }
+    } catch (error: any) {
+      logger.error("Error setting up Google Cloud credentials", { error: error.message });
+      throw new Error(`Failed to configure Google Cloud credentials: ${error.message}`);
+    }
+
+    const clientConfig: any = {
       vertexai: true,
       project: projectId,
       location: location,
-    });
+    };
+    return new GoogleGenAI(clientConfig);
   }
 
   /**
