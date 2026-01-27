@@ -3,6 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { logger } from "../utils/logger";
 
 const router = express.Router();
 
@@ -64,7 +65,7 @@ router.post(
       if (req.file?.path && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
-      console.error("Upload error:", error);
+      logger.error("Upload error", error);
       res.status(500).json({
         error: "Failed to upload photo",
         message: error.message,

@@ -3,6 +3,7 @@
  * BACKEND LOGIC - Core scoring algorithm
  */
 
+import { logger } from "../utils/logger";
 import type { InventoryItem, UserPreferences, ScoredItem } from "../types/inventory";
 
 export class ScoringEngine {
@@ -73,7 +74,7 @@ export class ScoringEngine {
     
     // If no match, return 0 (will filter out this item)
     if (itemGender !== "" && userGender !== "") {
-      console.debug(`Gender mismatch: item="${itemGender}", user="${userGender}"`);
+      logger.info("Gender mismatch", { itemGender, userGender });
     }
     
     return 0;
@@ -245,7 +246,10 @@ export class ScoringEngine {
     const genderMismatched = scored.filter(item => item.matchDetails.genderMatch === 0);
     
     // Log debugging info
-    console.log(`Scoring: ${genderMatched.length} items with gender match, ${genderMismatched.length} with gender mismatch (low scores)`);
+    logger.info("Scoring results", {
+      genderMatched: genderMatched.length,
+      genderMismatched: genderMismatched.length,
+    });
     
     // ALWAYS return ALL items sorted by score (descending)
     // Even gender mismatches are included (they have very low scores ~10% of normal)
@@ -256,7 +260,10 @@ export class ScoringEngine {
     if (sorted.length > 0) {
       const maxScore = sorted[0].score;
       const minScore = sorted[sorted.length - 1].score;
-      console.log(`Score range: ${maxScore.toFixed(2)} (best) to ${minScore.toFixed(2)} (worst)`);
+      logger.info("Score range", {
+        max: maxScore.toFixed(2),
+        min: minScore.toFixed(2),
+      });
     }
     
     return sorted;

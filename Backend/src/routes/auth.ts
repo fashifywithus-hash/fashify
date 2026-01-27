@@ -3,6 +3,7 @@ import { body, validationResult } from "express-validator";
 import { User } from "../models/User";
 import { generateToken } from "../config/jwt";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { logger } from "../utils/logger";
 
 const router = express.Router();
 
@@ -52,7 +53,7 @@ router.post(
         token,
       });
     } catch (error: any) {
-      console.error("Signup error:", error);
+      logger.error("Signup error", error);
       res.status(500).json({
         error: "Failed to create account",
         message: error.message,
@@ -111,7 +112,7 @@ router.post(
         token,
       });
     } catch (error: any) {
-      console.error("Signin error:", error);
+      logger.error("Signin error", error);
       res.status(500).json({
         error: "Failed to sign in",
         message: error.message,
@@ -166,7 +167,7 @@ router.post("/me", authenticate, async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error("Get user error:", error);
+    logger.error("Get user error", error);
     res.status(500).json({
       error: "Failed to get user",
       message: error.message,

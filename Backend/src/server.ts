@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { connectDatabase } from "./config/database";
 import { requestLogger } from "./middleware/logger";
+import { logger } from "./utils/logger";
 import authRoutes from "./routes/auth";
 import onboardingRoutes from "./routes/onboarding";
 import uploadRoutes from "./routes/upload";
@@ -76,7 +77,7 @@ app.use("/api/tryon", tryOnRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("Error:", err);
+  logger.error("Error in request handler", err);
   res.status(err.status || 500).json({
     error: err.message || "Internal server error",
     ...(process.env.NODE_ENV === "development" && { stack: err.stack })
@@ -96,11 +97,10 @@ const startServer = async () => {
 
     // Start listening
     app.listen(PORT, () => {
-      console.log(`🚀 Fashify Backend API running on port ${PORT}`);
-      console.log(`📡 Health check: http://localhost:${PORT}/health`);
+      logger.info("Fashify Backend API started", { port: PORT, healthCheck: `http://localhost:${PORT}/health` });
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error("Failed to start server", error);
     process.exit(1);
   }
 };

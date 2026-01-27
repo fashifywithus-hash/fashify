@@ -5,6 +5,7 @@
 
 import { loadInventoryFromCSV } from "../core/csvParser";
 import { ScoringEngine } from "../core/scoringEngine";
+import { logger } from "../utils/logger";
 import type { UserPreferences, RecommendationResult, InventoryItem } from "../types/inventory";
 
 class RecommendationService {
@@ -27,7 +28,7 @@ class RecommendationService {
       this.inventory = await loadInventoryFromCSV();
       return this.inventory;
     } catch (error) {
-      console.error("Failed to load inventory:", error);
+      logger.error("Failed to load inventory", error);
       throw new Error("Failed to load inventory data");
     }
   }
@@ -37,28 +38,29 @@ class RecommendationService {
    */
   async getRecommendations(preferences: UserPreferences): Promise<RecommendationResult> {
     const inventory = await this.loadInventory();
-    console.log(`Loaded ${inventory.length} items from inventory`);
-    console.log("User preferences:", preferences);
+    logger.info("Loaded items from inventory", { count: inventory.length });
+    logger.info("User preferences", preferences);
     
     // Check inventory genders for debugging
     const genders = [...new Set(inventory.map(item => item.gender))];
-    console.log(`Available genders in inventory: ${genders.join(", ")}`);
-    console.log(`User gender: ${preferences.gender}`);
+    logger.info("Available genders in inventory", { genders, userGender: preferences.gender });
     
     // Score all items - will ALWAYS return items sorted by score (even with low scores)
     const scoredItems = this.scoringEngine.scoreItems(inventory, preferences);
-    console.log(`Scored ${scoredItems.length} items from ${inventory.length} total items`);
+    logger.info("Scored items", { scored: scoredItems.length, total: inventory.length });
     
     // Log top scored items for debugging
     if (scoredItems.length > 0) {
-      console.log("Top 5 scored items:", scoredItems.slice(0, 5).map(item => ({
-        description: item.description,
-        category: item.category,
-        gender: item.gender,
-        score: item.score.toFixed(2)
-      })));
+      logger.info("Top 5 scored items", {
+        items: scoredItems.slice(0, 5).map(item => ({
+          description: item.description,
+          category: item.category,
+          gender: item.gender,
+          score: item.score.toFixed(2)
+        }))
+      });
     } else {
-      console.error("ERROR: No items scored! This should never happen.");
+      logger.error("No items scored! This should never happen.");
     }
     
     // ALWAYS get top 4 from each category - even if scores are very low
@@ -68,13 +70,18 @@ class RecommendationService {
     const jeans = this.getTopItemsByCategory(scoredItems, ["jean", "pant", "cargo", "trouser"], 4);
     const shoes = this.getTopItemsByCategory(scoredItems, ["shoe", "sneaker", "oxford"], 4);
     
-    console.log(`Final Recommendations: ${shirts.length} shirts, ${jackets.length} jackets, ${jeans.length} jeans, ${shoes.length} shoes`);
+    logger.info("Final recommendations", {
+      shirts: shirts.length,
+      jackets: jackets.length,
+      jeans: jeans.length,
+      shoes: shoes.length,
+    });
     
     // Log if any category is empty (should help debug)
-    if (shirts.length === 0) console.warn("⚠️ No shirts found in inventory matching keywords: tshirt, shirt");
-    if (jackets.length === 0) console.warn("⚠️ No jackets found in inventory matching keywords: jacket, hoodie, sweater, puffer");
-    if (jeans.length === 0) console.warn("⚠️ No jeans found in inventory matching keywords: jean, pant, cargo, trouser");
-    if (shoes.length === 0) console.warn("⚠️ No shoes found in inventory matching keywords: shoe, sneaker, oxford");
+    if (shirts.length === 0) logger.info("No shirts found in inventory matching keywords", { keywords: ["tshirt", "shirt"] });
+    if (jackets.length === 0) logger.info("No jackets found in inventory matching keywords", { keywords: ["jacket", "hoodie", "sweater", "puffer"] });
+    if (jeans.length === 0) logger.info("No jeans found in inventory matching keywords", { keywords: ["jean", "pant", "cargo", "trouser"] });
+    if (shoes.length === 0) logger.info("No shoes found in inventory matching keywords", { keywords: ["shoe", "sneaker", "oxford"] });
     
     return {
       shirts,
@@ -117,10 +124,18 @@ class RecommendationService {
     
     if (result.length > 0) {
       const scores = result.map(r => r.score.toFixed(2)).join(', ');
-      console.log(`✓ Category "${categoryKeywords[0]}": Found ${filtered.length} items, returning top ${result.length} (scores: ${scores})`);
+      logger.info("Category items found", {
+        category: categoryKeywords[0],
+        found: filtered.length,
+        returning: result.length,
+        scores,
+      });
     } else if (filtered.length === 0) {
       // This means no items in inventory match this category at all
-      console.warn(`✗ Category "${categoryKeywords[0]}": No items found in inventory matching keywords: ${categoryKeywords.join(', ')}`);
+      logger.info("No items found in inventory matching category keywords", {
+        category: categoryKeywords[0],
+        keywords: categoryKeywords,
+      });
     }
     
     return result;

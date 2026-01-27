@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { logger } from "../utils/logger";
 
 dotenv.config();
 
@@ -12,8 +13,9 @@ if (process.env.NODE_ENV === "production" && !process.env.MONGODB_URI) {
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    console.log("🔌 Attempting to connect to MongoDB...");
-    console.log("MongoDB URI:", MONGODB_URI ? `${MONGODB_URI.substring(0, 30)}...` : "NOT SET");
+    logger.info("Attempting to connect to MongoDB", {
+      uri: MONGODB_URI ? `${MONGODB_URI.substring(0, 30)}...` : "NOT SET",
+    });
     
     // Set connection options for better reliability
     await mongoose.connect(MONGODB_URI, {
@@ -21,10 +23,9 @@ export const connectDatabase = async (): Promise<void> => {
       socketTimeoutMS: 45000,
     });
     
-    console.log("✅ Connected to MongoDB");
+    logger.info("Connected to MongoDB");
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    logger.error("MongoDB connection error", error);
     // Don't throw - let the caller handle it
     // This allows server to keep running even if DB connection fails
     throw error;
@@ -33,11 +34,11 @@ export const connectDatabase = async (): Promise<void> => {
 
 // Handle connection events
 mongoose.connection.on("error", (err) => {
-  console.error("MongoDB connection error:", err);
+  logger.error("MongoDB connection error", err);
 });
 
 mongoose.connection.on("disconnected", () => {
-  console.log("MongoDB disconnected");
+  logger.info("MongoDB disconnected");
 });
 
 export default mongoose;

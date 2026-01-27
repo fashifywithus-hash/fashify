@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { Profile } from "../models/Profile";
 import { loadInventoryFromCSV } from "../core/csvParser";
 import { tryOnService } from "../services/tryOnService";
+import { logger } from "../utils/logger";
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ const router = express.Router();
  */
 router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    console.log("🎨 Try-on request received");
+    logger.info("Try-on request received");
     
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -45,7 +46,8 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       });
     }
 
-    console.log(`📋 Try-on request for user ${userId} with styleIds:`, {
+    logger.info("Try-on request for user", {
+      userId,
       baseUpper: baseUpperStyleId,
       outerUpper: outerUpperStyleId,
       bottoms: bottomsStyleId,
@@ -69,11 +71,11 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       });
     }
 
-    console.log(`✅ Found user profile with photo for user ${userId}`);
+    logger.info("Found user profile with photo", { userId });
 
     // Load inventory to validate styleIds
     const inventory = await loadInventoryFromCSV();
-    console.log(`📦 Loaded ${inventory.length} inventory items`);
+    logger.info("Loaded inventory items", { count: inventory.length });
 
     // Find inventory items by styleId
     const baseUpperItem = inventory.find(item => item.styleId === baseUpperStyleId);
@@ -96,7 +98,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     // Generate try-on image using Gemini API
-    console.log("🔄 Calling Gemini API to generate try-on image...");
+    logger.info("Calling Gemini API to generate try-on image");
     const tryOnImage = await tryOnService.generateTryOn({
       userPhoto: profile.photo_url,
       baseUpperStyleId,
@@ -105,7 +107,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       footwearStyleId,
     });
 
-    console.log("✅ Try-on image generated successfully");
+    logger.info("Try-on image generated successfully");
 
     res.json({
       success: true,
@@ -113,7 +115,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       message: "Try-on image generated successfully",
     });
   } catch (error: any) {
-    console.error("❌ Try-on error:", error);
+    logger.error("Try-on error", error);
     res.status(500).json({
       error: "Failed to generate try-on image",
       message: error.message,

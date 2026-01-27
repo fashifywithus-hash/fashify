@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import type { InventoryItem } from "../types/inventory";
 import { loadInventoryFromCSV } from "../core/csvParser";
+import { logger } from "../utils/logger";
 
 interface TryOnRequest {
   userPhoto: string; // Base64 data URL
@@ -26,7 +27,7 @@ class TryOnService {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "fashify-484620";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
 
-    console.log(`🔧 Initializing Gemini client with project: ${projectId}, location: ${location}`);
+    logger.info("Initializing Gemini client", { projectId, location });
 
     return new GoogleGenAI({
       vertexai: true,
@@ -49,20 +50,56 @@ class TryOnService {
    */
   private getFirstImageForStyleId(styleId: string): string | null {
     // Images are stored in inventory-mappings/default-images/{styleId}.jpg
+    // Try multiple paths to handle different deployment scenarios
     const possiblePaths = [
-      path.join(__dirname, "..", "..", "inventory-mappings", "default-images", `${styleId}.jpg`),
+      // Path 1: Relative to compiled dist directory (production Docker)
       path.resolve(process.cwd(), "inventory-mappings", "default-images", `${styleId}.jpg`),
+      // Path 2: Relative to source directory (development)
+      path.join(__dirname, "..", "..", "inventory-mappings", "default-images", `${styleId}.jpg`),
+      // Path 3: Absolute from project root (fallback)
       path.resolve(__dirname, "..", "..", "..", "Backend", "inventory-mappings", "default-images", `${styleId}.jpg`),
     ];
 
+    logger.info("Searching for image", {
+      styleId,
+      cwd: process.cwd(),
+      __dirname: __dirname,
+      paths: possiblePaths,
+    });
+
     for (const imagePath of possiblePaths) {
       if (fs.existsSync(imagePath)) {
-        console.log(`📸 Found image for styleId ${styleId}: ${imagePath}`);
+        logger.info("Found image for styleId", { styleId, imagePath });
         return imagePath;
+      } else {
+        logger.info("Image not found at path", { styleId, imagePath });
       }
     }
 
-    console.warn(`⚠️ No image found for styleId: ${styleId}`);
+    // Check if directory exists at all
+    const baseDir = path.resolve(process.cwd(), "inventory-mappings", "default-images");
+    if (!fs.existsSync(baseDir)) {
+      logger.error("Directory does not exist", {
+        baseDir,
+        cwd: process.cwd(),
+        __dirname: __dirname,
+      });
+    } else {
+      // List available files in directory
+      try {
+        const files = fs.readdirSync(baseDir);
+        logger.info("Image not found, listing available files", {
+          styleId,
+          requestedFile: `${styleId}.jpg`,
+          availableFiles: files.slice(0, 10),
+          totalFiles: files.length,
+        });
+      } catch (err) {
+        logger.error("Error reading directory", { baseDir, error: err });
+      }
+    }
+
+    logger.info("No image found for styleId", { styleId });
     return null;
   }
 
@@ -81,14 +118,14 @@ class TryOnService {
    */
   async generateTryOn(request: TryOnRequest): Promise<string> {
     try {
-      console.log("🎨 Starting try-on generation process");
+      logger.info("Starting try-on generation process");
 
       // Convert user photo from data URL to buffer
-      console.log("📷 Processing user photo...");
+      logger.info("Processing user photo");
       const userPhotoBuffer = this.dataURLToBuffer(request.userPhoto);
 
       // Get image paths for each styleId
-      console.log("📦 Loading inventory item images...");
+      logger.info("Loading inventory item images");
       const baseUpperImagePath = this.getFirstImageForStyleId(request.baseUpperStyleId);
       const outerUpperImagePath = this.getFirstImageForStyleId(request.outerUpperStyleId);
       const bottomsImagePath = this.getFirstImageForStyleId(request.bottomsStyleId);
@@ -110,7 +147,7 @@ class TryOnService {
       const bottomsBuffer = this.loadImageFile(bottomsImagePath);
       const footwearBuffer = this.loadImageFile(footwearImagePath);
 
-      console.log("✅ All images loaded successfully");
+      logger.info("All images loaded successfully");
 
       // Initialize Gemini client
       const ai = this.getClient();
@@ -171,7 +208,7 @@ class TryOnService {
     `,
       ];
 
-      console.log("🤖 Calling Gemini API using models.generateContent (matching Python script)...");
+      logger.info("Calling Gemini API using models.generateContent");
 
       // Call Gemini API using models.generateContent - matches Python script exactly
       // Python: client.models.generate_content() with response_modalities=['IMAGE']
@@ -186,7 +223,7 @@ class TryOnService {
         },
       });
 
-      console.log("✅ Gemini API response received");
+      logger.info("Gemini API response received");
 
       // Extract image from response - matches Python script structure
       // Python: response.candidates[0].content.parts with inline_data
@@ -207,24 +244,25 @@ class TryOnService {
         if (part.inlineData && part.inlineData.data) {
           imageBase64 = part.inlineData.data;
           mimeType = part.inlineData.mimeType || "image/png";
-          console.log(`📸 Found image in response with mime_type: ${mimeType}`);
+          logger.info("Found image in response", { mimeType });
           break;
         }
       }
 
       if (!imageBase64) {
-        console.error("❌ Available part types:", candidate.content.parts.map((p: any) => p.inlineData ? "image" : "text"));
+        const partTypes = candidate.content.parts.map((p: any) => p.inlineData ? "image" : "text");
+        logger.error("No image data found in Gemini API response", { partTypes });
         throw new Error("No image data found in Gemini API response");
       }
 
       // Convert to data URL format
       const dataURL = `data:${mimeType};base64,${imageBase64}`;
 
-      console.log("✅ Try-on image generated and converted to data URL");
+      logger.info("Try-on image generated and converted to data URL");
 
       return dataURL;
     } catch (error: any) {
-      console.error("❌ Error in try-on generation:", error);
+      logger.error("Error in try-on generation", error);
       throw new Error(`Failed to generate try-on image: ${error.message}`);
     }
   }

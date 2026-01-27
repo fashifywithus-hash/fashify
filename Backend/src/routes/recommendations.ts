@@ -2,6 +2,7 @@ import express, { Response } from "express";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { Profile } from "../models/Profile";
 import { recommendationService } from "../services/recommendationService";
+import { logger } from "../utils/logger";
 import type { UserPreferences } from "../types/inventory";
 
 const router = express.Router();
@@ -40,12 +41,17 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       styles: profile.preferred_styles || [],
     };
 
-    console.log(`📊 Generating recommendations for user ${userId} with preferences:`, preferences);
+    logger.info("Generating recommendations for user", { userId, preferences });
 
     // Get recommendations based on user's saved preferences
     const recommendations = await recommendationService.getRecommendations(preferences);
 
-    console.log(`✅ Recommendations generated: ${recommendations.shirts.length} shirts, ${recommendations.jackets.length} jackets, ${recommendations.jeans.length} jeans, ${recommendations.shoes.length} shoes`);
+    logger.info("Recommendations generated", {
+      shirts: recommendations.shirts.length,
+      jackets: recommendations.jackets.length,
+      jeans: recommendations.jeans.length,
+      shoes: recommendations.shoes.length,
+    });
 
     res.json({
       message: "Recommendations generated successfully",
@@ -53,7 +59,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       preferences, // Include preferences used for debugging
     });
   } catch (error: any) {
-    console.error("Get recommendations error:", error);
+    logger.error("Get recommendations error", error);
     res.status(500).json({
       error: "Failed to get recommendations",
       message: error.message,

@@ -2,6 +2,7 @@ import express, { Response } from "express";
 import { body, validationResult } from "express-validator";
 import { Profile } from "../models/Profile";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { logger } from "../utils/logger";
 
 const router = express.Router();
 
@@ -77,7 +78,7 @@ router.post(
         profile: result,
       });
     } catch (error: any) {
-      console.error("Save profile error:", error);
+      logger.error("Save profile error", error);
       res.status(500).json({
         error: "Failed to save profile",
         message: error.message,
@@ -111,7 +112,7 @@ router.post("/get", authenticate, async (req: AuthRequest, res: Response) => {
       profile,
     });
   } catch (error: any) {
-    console.error("Get profile error:", error);
+    logger.error("Get profile error", error);
     res.status(500).json({
       error: "Failed to get profile",
       message: error.message,

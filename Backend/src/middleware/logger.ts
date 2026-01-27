@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { logger } from "../utils/logger";
 
 export interface LoggedRequest extends Request {
   startTime?: number;
@@ -75,7 +76,7 @@ export const requestLogger = (
   }
 
   // Log the request
-  console.log("📥 API Request:", JSON.stringify(logData, null, 2));
+  logger.info("API Request", logData);
 
   // Log response when it finishes
   const originalSend = res.send;
@@ -83,7 +84,12 @@ export const requestLogger = (
     const responseTime = req.startTime ? Date.now() - req.startTime : 0;
     const statusCode = res.statusCode;
     
-    console.log(`📤 API Response: ${method} ${fullUrl} - ${statusCode} (${responseTime}ms)`);
+    logger.info("API Response", {
+      method,
+      path: fullUrl,
+      statusCode,
+      responseTimeMs: responseTime,
+    });
     
     return originalSend.call(this, data);
   };

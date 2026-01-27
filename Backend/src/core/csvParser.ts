@@ -5,6 +5,7 @@
 
 import fs from "fs";
 import path from "path";
+import { logger } from "../utils/logger";
 import type { InventoryItem } from "../types/inventory";
 
 /**
@@ -56,17 +57,28 @@ export function parseInventoryCSV(csvContent: string): InventoryItem[] {
       // (contains letters, not just numbers or special chars)
       if (firstField.match(/[a-z]/i) && !firstField.match(/^[\d\s\-]+$/)) {
         dataStartIndex = i;
-        console.log(`✓ Found data starting at line ${i + 1}: "${firstField.substring(0, 30)}..." (${parsed.length} fields)`);
+        logger.info("Found data starting at line", {
+          line: i + 1,
+          firstField: firstField.substring(0, 30),
+          fieldCount: parsed.length,
+        });
         break;
       }
     } else if (isHeaderLine) {
       // Log header lines for debugging
-      console.log(`  Skipping header line ${i + 1}: "${firstField}" (${parsed.length} fields)`);
+      logger.info("Skipping header line", {
+        line: i + 1,
+        firstField,
+        fieldCount: parsed.length,
+      });
     }
   }
   
   const dataLines = lines.slice(dataStartIndex);
-  console.log(`Processing ${dataLines.length} data lines (starting from line ${dataStartIndex + 1})`);
+  logger.info("Processing data lines", {
+    count: dataLines.length,
+    startLine: dataStartIndex + 1,
+  });
   
   const items: InventoryItem[] = [];
   
@@ -83,20 +95,24 @@ export function parseInventoryCSV(csvContent: string): InventoryItem[] {
       // Weather_Max, Style_Tags, Lifestyle_Tags, Body_Type_Fit, Skin_Undertone, 
       // Formality_Score, Layer_Level
       if (parsed.length < 15) {
-        console.warn(`Skipping incomplete row (only ${parsed.length} fields, need 15+):`, line.substring(0, 80) + "...");
+        logger.info("Skipping incomplete row", {
+          fieldCount: parsed.length,
+          required: 15,
+          preview: line.substring(0, 80),
+        });
         continue;
       }
       
       // Additional validation: first field should be an item description
       const firstField = parsed[0]?.trim() || "";
       if (!firstField || firstField.length < 2) {
-        console.warn(`Skipping invalid row (empty first field)`);
+        logger.info("Skipping invalid row (empty first field)");
         continue;
       }
       
       // Skip header keywords
       if (firstField.match(/^(description|category|type|color|item|style|main|sub|gender|base|weather|lifestyle|body|skin|formality|layer|hot|cold)$/i)) {
-        console.warn(`Skipping header row: "${firstField}"`);
+        logger.info("Skipping header row", { firstField });
         continue;
       }
       
@@ -125,11 +141,11 @@ export function parseInventoryCSV(csvContent: string): InventoryItem[] {
       
       items.push(item);
     } catch (error) {
-      console.error("Error parsing CSV line:", line, error);
+      logger.error("Error parsing CSV line", { line, error });
     }
   }
   
-  console.log(`Parsed ${items.length} items from CSV`);
+  logger.info("Parsed items from CSV", { count: items.length });
   return items;
 }
 
@@ -236,12 +252,14 @@ export async function loadInventoryFromCSV(): Promise<InventoryItem[]> {
     // Read the CSV file using Node.js file system
     const csvContent = fs.readFileSync(csvPath, "utf-8");
     
-    console.log(`📄 Loading inventory from: ${csvPath}`);
-    console.log(`📄 File size: ${(csvContent.length / 1024).toFixed(2)} KB`);
+    logger.info("Loading inventory from CSV", {
+      path: csvPath,
+      fileSizeKB: (csvContent.length / 1024).toFixed(2),
+    });
     
     return parseInventoryCSV(csvContent);
   } catch (error: any) {
-    console.error("Error loading inventory CSV:", error);
+    logger.error("Error loading inventory CSV", error);
     throw new Error(`Failed to load inventory data: ${error.message}`);
   }
 }

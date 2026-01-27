@@ -43,6 +43,9 @@ COPY --from=build /usr/src/app/dist ./dist
 # Copy CSV file (needed for recommendations)
 COPY --from=build /usr/src/app/Item-attributes.csv ./Item-attributes.csv
 
+# Copy inventory-mappings directory (needed for try-on images)
+COPY --from=build /usr/src/app/inventory-mappings ./inventory-mappings
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
