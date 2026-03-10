@@ -61,6 +61,16 @@ class ProfileService {
   }
 
   /**
+   * Update only the profile photo (for "Change my photo" flow)
+   */
+  async updatePhoto(photoUrl: string): Promise<Profile> {
+    const data = await apiClient.patch<{ profile: Profile }>("/api/onboarding/photo", {
+      photo_url: photoUrl,
+    });
+    return data.profile;
+  }
+
+  /**
    * Check if user has a profile
    */
   async hasProfile(): Promise<boolean> {

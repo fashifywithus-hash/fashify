@@ -5,9 +5,6 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Settings, Loader2, AlertCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { profileService } from "@/services/profileService";
-import { recommendationService } from "@/services/recommendationService";
-import type { RecommendationResult } from "@/types/inventory";
-import { CategorySection } from "@/components/recommendations/CategorySection";
 import { useToast } from "@/hooks/use-toast";
 
 const Suggestions = () => {
@@ -15,7 +12,7 @@ const Suggestions = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
+  const [recommendations, setRecommendations] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,12 +41,9 @@ const Suggestions = () => {
         return;
       }
 
-      // Get recommendations from backend API
-      // Backend automatically uses the user's saved profile from the auth token
-      console.log("Loading recommendations from backend API...");
-      const result = await recommendationService.getRecommendations();
-      console.log("Recommendations result:", result);
-      setRecommendations(result);
+      // Legacy recommendations view is no longer used in the simplified suit flow.
+      // Navigate users directly to the suit selection page instead.
+      navigate("/selection");
     } catch (err: any) {
       console.error("Error loading recommendations:", err);
       console.error("Error details:", err);

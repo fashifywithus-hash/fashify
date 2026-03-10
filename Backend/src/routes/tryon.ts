@@ -1,7 +1,7 @@
 import express, { Response } from "express";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { Profile } from "../models/Profile";
-import { loadInventoryFromCSV } from "../core/csvParser";
+import { catalogService } from "../services/catalogService";
 import { tryOnService } from "../services/tryOnService";
 import { logger } from "../utils/logger";
 
@@ -11,13 +11,13 @@ const router = express.Router();
  * POST /api/tryon
  * Generate try-on image using Gemini API
  * Requires authentication - automatically uses userId from token
- * 
+ *
  * Request body:
  * {
- *   baseUpperStyleId: string,    // StyleId for base upper layer (e.g., t-shirt)
- *   outerUpperStyleId: string,    // StyleId for outer upper layer (e.g., jacket)
- *   bottomsStyleId: string,       // StyleId for bottoms (e.g., jeans)
- *   footwearStyleId: string       // StyleId for footwear (e.g., shoes)
+ *   baseUpperStyleId: string,    // Shirt inside blazer (e.g., SHRT_001)
+ *   outerUpperStyleId: string,   // Blazer/jacket (e.g., BLZ_001)
+ *   bottomsStyleId: string,      // Pants (e.g., PANT_001)
+ *   footwearStyleId: string      // Shoes (e.g., SHOE_001)
  * }
  * 
  * Response:
@@ -54,7 +54,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       footwear: footwearStyleId,
     });
 
-    // Fetch user's profile to get uploaded photo
+    // Fetch user's profile to get uploaded photo (used as Image 0 in Gemini try-on)
     const profile = await Profile.findOne({ user_id: userId });
 
     if (!profile) {
@@ -73,27 +73,23 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 
     logger.info("Found user profile with photo", { userId });
 
-    // Load inventory to validate styleIds
-    const inventory = await loadInventoryFromCSV();
-    logger.info("Loaded inventory items", { count: inventory.length });
+    // Validate styleIds against suit catalog (only items with existing image files)
+    const catalog = catalogService.getCatalog();
 
-    // Find inventory items by styleId
-    const baseUpperItem = inventory.find(item => item.styleId === baseUpperStyleId);
-    const outerUpperItem = inventory.find(item => item.styleId === outerUpperStyleId);
-    const bottomsItem = inventory.find(item => item.styleId === bottomsStyleId);
-    const footwearItem = inventory.find(item => item.styleId === footwearStyleId);
+    const baseUpperValid = catalog.shirts.some((i) => i.styleId === baseUpperStyleId);
+    const outerUpperValid = catalog.blazers.some((i) => i.styleId === outerUpperStyleId);
+    const bottomsValid = catalog.pants.some((i) => i.styleId === bottomsStyleId);
+    const footwearValid = catalog.shoes.some((i) => i.styleId === footwearStyleId);
 
-    // Validate all styleIds exist
-    const missingItems: string[] = [];
-    if (!baseUpperItem) missingItems.push(`baseUpperStyleId: ${baseUpperStyleId}`);
-    if (!outerUpperItem) missingItems.push(`outerUpperStyleId: ${outerUpperStyleId}`);
-    if (!bottomsItem) missingItems.push(`bottomsStyleId: ${bottomsStyleId}`);
-    if (!footwearItem) missingItems.push(`footwearStyleId: ${footwearStyleId}`);
-
-    if (missingItems.length > 0) {
+    if (!baseUpperValid || !outerUpperValid || !bottomsValid || !footwearValid) {
+      const missing: string[] = [];
+      if (!baseUpperValid) missing.push(`baseUpperStyleId (shirt): ${baseUpperStyleId}`);
+      if (!outerUpperValid) missing.push(`outerUpperStyleId (blazer): ${outerUpperStyleId}`);
+      if (!bottomsValid) missing.push(`bottomsStyleId (pants): ${bottomsStyleId}`);
+      if (!footwearValid) missing.push(`footwearStyleId (shoes): ${footwearStyleId}`);
       return res.status(404).json({
         error: "Invalid styleIds",
-        message: `The following styleIds were not found in inventory: ${missingItems.join(", ")}`,
+        message: `The following styleIds were not found in suit catalog: ${missing.join(", ")}`,
       });
     }
 

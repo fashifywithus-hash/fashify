@@ -22,7 +22,15 @@ export const connectDatabase = async (): Promise<void> => {
       serverSelectionTimeoutMS: 10000, // 10 second timeout
       socketTimeoutMS: 45000,
     });
-    
+
+    // Drop legacy phoneNumber unique index if present (allows multiple users without phone)
+    try {
+      await mongoose.connection.db.collection("users").dropIndex("phoneNumber_1");
+      logger.info("Dropped legacy phoneNumber_1 index on users collection");
+    } catch {
+      // Index may not exist; ignore
+    }
+
     logger.info("Connected to MongoDB");
   } catch (error) {
     logger.error("MongoDB connection error", error);

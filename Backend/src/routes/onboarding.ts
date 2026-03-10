@@ -88,6 +88,56 @@ router.post(
 );
 
 /**
+ * PATCH /api/onboarding/photo
+ * Update only the user's profile photo (for "Change my photo" flow)
+ */
+router.patch(
+  "/photo",
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const userId = req.user.id;
+      const { photo_url: photoUrl } = req.body;
+
+      if (photoUrl !== undefined && photoUrl !== null && typeof photoUrl !== "string") {
+        return res.status(400).json({
+          error: "Invalid photo_url",
+          message: "photo_url must be a string or null",
+        });
+      }
+
+      const profile = await Profile.findOneAndUpdate(
+        { user_id: userId },
+        { photo_url: photoUrl ?? null },
+        { new: true, runValidators: true }
+      );
+
+      if (!profile) {
+        return res.status(404).json({
+          error: "Profile not found",
+          message: "Complete onboarding first",
+        });
+      }
+
+      res.json({
+        message: "Photo updated successfully",
+        profile,
+      });
+    } catch (error: any) {
+      logger.error("Update photo error", error);
+      res.status(500).json({
+        error: "Failed to update photo",
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
  * POST /api/onboarding/get
  * Get user profile/onboarding data
  */

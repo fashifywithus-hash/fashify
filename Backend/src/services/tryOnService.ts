@@ -5,8 +5,6 @@
 import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
-import type { InventoryItem } from "../types/inventory";
-import { loadInventoryFromCSV } from "../core/csvParser";
 import { logger } from "../utils/logger";
 
 interface TryOnRequest {
@@ -18,7 +16,6 @@ interface TryOnRequest {
 }
 
 class TryOnService {
-  private inventory: InventoryItem[] | null = null;
   private getClient() {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "fashify-484620";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
@@ -92,61 +89,43 @@ class TryOnService {
   }
 
   /**
-   * Get image file for a styleId from default-images directory
+   * Resolve image file path for a styleId based on new suit inventory layout.
+   *
+   * Convention:
+   * - BLZ_xxx -> inventory-images/blazers/BLZ_xxx.jpg
+   * - SHRT_xxx -> inventory-images/shirts/SHRT_xxx.jpg
+   * - PANT_xxx -> inventory-images/pants/PANT_xxx.jpg
+   * - SHOE_xxx -> inventory-images/shoes/SHOE_xxx.jpg
    */
-  private getFirstImageForStyleId(styleId: string): string | null {
-    // Images are stored in inventory-mappings/default-images/{styleId}.jpg
-    // Try multiple paths to handle different deployment scenarios
-    const possiblePaths = [
-      // Path 1: Relative to compiled dist directory (production Docker)
-      path.resolve(process.cwd(), "inventory-mappings", "default-images", `${styleId}.jpg`),
-      // Path 2: Relative to source directory (development)
-      path.join(__dirname, "..", "..", "inventory-mappings", "default-images", `${styleId}.jpg`),
-      // Path 3: Absolute from project root (fallback)
-      path.resolve(__dirname, "..", "..", "..", "Backend", "inventory-mappings", "default-images", `${styleId}.jpg`),
-    ];
+  private getImagePathForStyleId(styleId: string): string | null {
+    const upper = styleId.toUpperCase();
+    let folder: string | null = null;
 
-    logger.info("Searching for image", {
-      styleId,
-      cwd: process.cwd(),
-      __dirname: __dirname,
-      paths: possiblePaths,
-    });
-
-    for (const imagePath of possiblePaths) {
-      if (fs.existsSync(imagePath)) {
-        logger.info("Found image for styleId", { styleId, imagePath });
-        return imagePath;
-      } else {
-        logger.info("Image not found at path", { styleId, imagePath });
-      }
+    if (upper.startsWith("BLZ_")) {
+      folder = "blazers";
+    } else if (upper.startsWith("SHRT_")) {
+      folder = "shirts";
+    } else if (upper.startsWith("PANT_")) {
+      folder = "pants";
+    } else if (upper.startsWith("SHOE_")) {
+      folder = "shoes";
     }
 
-    // Check if directory exists at all
-    const baseDir = path.resolve(process.cwd(), "inventory-mappings", "default-images");
-    if (!fs.existsSync(baseDir)) {
-      logger.error("Directory does not exist", {
-        baseDir,
-        cwd: process.cwd(),
-        __dirname: __dirname,
-      });
-    } else {
-      // List available files in directory
-      try {
-        const files = fs.readdirSync(baseDir);
-        logger.info("Image not found, listing available files", {
-          styleId,
-          requestedFile: `${styleId}.jpg`,
-          availableFiles: files.slice(0, 10),
-          totalFiles: files.length,
-        });
-      } catch (err) {
-        logger.error("Error reading directory", { baseDir, error: err });
-      }
+    if (!folder) {
+      logger.error("Unknown styleId prefix for try-on", { styleId });
+      return null;
     }
 
-    logger.info("No image found for styleId", { styleId });
-    return null;
+    // inventory-images is at Backend/inventory-images relative to this file
+    const imagePath = path.resolve(__dirname, "..", "..", "inventory-images", folder, `${upper}.jpg`);
+
+    if (!fs.existsSync(imagePath)) {
+      logger.error("Image file not found for styleId", { styleId, folder, imagePath });
+      return null;
+    }
+
+    logger.info("Resolved image for styleId", { styleId, folder, imagePath });
+    return imagePath;
   }
 
   /**
@@ -170,12 +149,12 @@ class TryOnService {
       logger.info("Processing user photo");
       const userPhotoBuffer = this.dataURLToBuffer(request.userPhoto);
 
-      // Get image paths for each styleId
-      logger.info("Loading inventory item images");
-      const baseUpperImagePath = this.getFirstImageForStyleId(request.baseUpperStyleId);
-      const outerUpperImagePath = this.getFirstImageForStyleId(request.outerUpperStyleId);
-      const bottomsImagePath = this.getFirstImageForStyleId(request.bottomsStyleId);
-      const footwearImagePath = this.getFirstImageForStyleId(request.footwearStyleId);
+      // Get image paths for each styleId using new suit inventory layout
+      logger.info("Loading suit item images");
+      const baseUpperImagePath = this.getImagePathForStyleId(request.baseUpperStyleId);
+      const outerUpperImagePath = this.getImagePathForStyleId(request.outerUpperStyleId);
+      const bottomsImagePath = this.getImagePathForStyleId(request.bottomsStyleId);
+      const footwearImagePath = this.getImagePathForStyleId(request.footwearStyleId);
 
       // Validate all images exist
       if (!baseUpperImagePath || !outerUpperImagePath || !bottomsImagePath || !footwearImagePath) {

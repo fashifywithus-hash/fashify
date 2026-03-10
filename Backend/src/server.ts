@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDatabase } from "./config/database";
@@ -9,6 +10,7 @@ import onboardingRoutes from "./routes/onboarding";
 import uploadRoutes from "./routes/upload";
 import recommendationsRoutes from "./routes/recommendations";
 import tryOnRoutes from "./routes/tryon";
+import catalogRoutes from "./routes/catalog";
 
 // Load environment variables
 dotenv.config();
@@ -60,6 +62,11 @@ app.use(cors({
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+// Static serving for suit inventory images
+// Exposes Backend/inventory-images under /static/suits
+const inventoryImagesPath = path.resolve(__dirname, "..", "inventory-images");
+app.use("/static/suits", express.static(inventoryImagesPath));
+
 // Health check (before logging middleware)
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Fashify Backend API is running" });
@@ -74,6 +81,7 @@ app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/tryon", tryOnRoutes);
+app.use("/api/catalog", catalogRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

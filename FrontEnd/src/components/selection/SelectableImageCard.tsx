@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import type { ScoredItem } from "@/types/inventory";
-import { getProductImage } from "@/lib/imageLoader";
+import type { CatalogItem } from "@/services/catalogService";
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/config/api";
 
 interface SelectableImageCardProps {
-  item: ScoredItem;
+  item: CatalogItem;
   isSelected: boolean;
   onToggle: () => void;
   showCheckmark?: boolean; // Optional prop to show/hide checkmark
@@ -16,24 +16,15 @@ export const SelectableImageCard = ({ item, isSelected, onToggle, showCheckmark 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadImage = async () => {
-      try {
-        setLoading(true);
-        const img = await getProductImage(item.styleId);
-        setImageUrl(img);
-      } catch (error) {
-        console.error("Error loading image:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Catalog API returns relative paths (e.g. /static/suits/...); resolve against backend origin so images load
+    const url = item.imageUrl.startsWith("http") ? item.imageUrl : `${API_BASE_URL}${item.imageUrl}`;
+    setLoading(false);
+    setImageUrl(url);
+  }, [item.imageUrl]);
 
-    loadImage();
-  }, [item.styleId]);
-
-  // Get emoji for placeholder
   const getCategoryEmoji = () => {
     const category = (item.category || "").toLowerCase();
+    if (category.includes("blazer")) return "🧥";
     if (category.includes("shirt") || category.includes("tshirt")) return "👕";
     if (category.includes("jacket")) return "🧥";
     if (category.includes("jean") || category.includes("pant")) return "👖";
@@ -57,14 +48,16 @@ export const SelectableImageCard = ({ item, isSelected, onToggle, showCheckmark 
           <div className="text-6xl">{getCategoryEmoji()}</div>
         </div>
       ) : (
-        <img
-          src={imageUrl}
-          alt={item.description}
-          className="w-full h-full object-cover"
-          onError={() => {
-            setImageUrl(null);
-          }}
-        />
+        <span className="absolute inset-0 block w-full h-full">
+          <img
+            src={imageUrl}
+            alt={item.styleId}
+            className="block w-full h-full min-h-0 min-w-0 object-cover object-center"
+            onError={() => {
+              setImageUrl(null);
+            }}
+          />
+        </span>
       )}
 
       {/* Hover Overlay (subtle, 2-4% opacity) */}

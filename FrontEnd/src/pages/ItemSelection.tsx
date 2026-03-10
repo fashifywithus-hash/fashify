@@ -3,45 +3,45 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { LogOut, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Loader2, ChevronLeft, ChevronRight, ImagePlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { profileService } from "@/services/profileService";
-import { recommendationService } from "@/services/recommendationService";
+import { catalogService, type CatalogResult, type CatalogItem } from "@/services/catalogService";
 import { tryOnService } from "@/services/tryOnService";
-import type { ScoredItem, RecommendationResult } from "@/types/inventory";
 import { SelectableImageCard } from "@/components/selection/SelectableImageCard";
+import { ChangePhotoModal } from "@/components/selection/ChangePhotoModal";
 
-type CategoryKey = "shirts" | "bottomwear" | "footwear" | "outerwear" | "accessories";
+type CategoryKey = "blazers" | "shirts" | "pants" | "shoes";
 
 interface CategoryConfig {
   key: CategoryKey;
   title: string;
   emoji: string;
-  getItems: (result: RecommendationResult) => ScoredItem[];
+  getItems: (result: CatalogResult) => CatalogItem[];
 }
 
 const CATEGORIES: CategoryConfig[] = [
   {
+    key: "blazers",
+    title: "Blazers",
+    emoji: "🧥",
+    getItems: (result) => result.blazers,
+  },
+  {
     key: "shirts",
-    title: "Shirts & Tops",
+    title: "Shirts (inside blazer)",
     emoji: "👕",
     getItems: (result) => result.shirts,
   },
   {
-    key: "outerwear",
-    title: "Outerwear / Jackets",
-    emoji: "🧥",
-    getItems: (result) => result.jackets,
-  },
-  {
-    key: "bottomwear",
-    title: "Bottomwear",
+    key: "pants",
+    title: "Pants",
     emoji: "👖",
-    getItems: (result) => result.jeans,
+    getItems: (result) => result.pants,
   },
   {
-    key: "footwear",
-    title: "Footwear",
+    key: "shoes",
+    title: "Shoes",
     emoji: "👟",
     getItems: (result) => result.shoes,
   },
@@ -56,27 +56,26 @@ const ItemSelection = () => {
   const [loading, setLoading] = useState(true);
   const [tryingOn, setTryingOn] = useState(false);
   const [userName, setUserName] = useState<string>("");
-  const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
+  const [catalog, setCatalog] = useState<CatalogResult | null>(null);
   
   // Track current index for each category (starts at 0)
   const [currentIndices, setCurrentIndices] = useState<CategoryIndices>({
+    blazers: 0,
     shirts: 0,
-    bottomwear: 0,
-    footwear: 0,
-    outerwear: 0,
-    accessories: 0,
+    pants: 0,
+    shoes: 0,
   });
 
   // Track mouse movement to show/hide navigation arrows
   const [showArrows, setShowArrows] = useState<Record<CategoryKey, boolean>>({
+    blazers: false,
     shirts: false,
-    bottomwear: false,
-    footwear: false,
-    outerwear: false,
-    accessories: false,
+    pants: false,
+    shoes: false,
   });
   
   const [mouseMoveTimeout, setMouseMoveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [changePhotoOpen, setChangePhotoOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -105,10 +104,9 @@ const ItemSelection = () => {
 
       setUserName(profile.name || "");
 
-      // Get recommendations from backend API
-      // Backend automatically uses the user's saved profile from the auth token
-      const result = await recommendationService.getRecommendations();
-      setRecommendations(result);
+      // Load suit catalog from backend API
+      const result = await catalogService.getCatalog();
+      setCatalog(result);
     } catch (error: any) {
       console.error("Error loading data:", error);
     } finally {
@@ -118,9 +116,9 @@ const ItemSelection = () => {
 
   // Navigate to next/previous item in a category
   const navigateItem = (categoryKey: CategoryKey, direction: 'prev' | 'next') => {
-    if (!recommendations) return;
+    if (!catalog) return;
 
-    const items = CATEGORIES.find(c => c.key === categoryKey)?.getItems(recommendations) || [];
+    const items = CATEGORIES.find(c => c.key === categoryKey)?.getItems(catalog) || [];
     if (items.length === 0) return;
 
     setCurrentIndices((prev) => {
@@ -141,9 +139,9 @@ const ItemSelection = () => {
   };
 
   // Get currently selected item for a category
-  const getCurrentItem = (categoryKey: CategoryKey): ScoredItem | null => {
-    if (!recommendations) return null;
-    const items = CATEGORIES.find(c => c.key === categoryKey)?.getItems(recommendations) || [];
+  const getCurrentItem = (categoryKey: CategoryKey): CatalogItem | null => {
+    if (!catalog) return null;
+    const items = CATEGORIES.find(c => c.key === categoryKey)?.getItems(catalog) || [];
     const currentIndex = currentIndices[categoryKey];
     return items[currentIndex] || null;
   };
@@ -182,24 +180,24 @@ const ItemSelection = () => {
   }, [mouseMoveTimeout]);
 
   const handleTryOn = async () => {
-    if (!recommendations) return;
+    if (!catalog) return;
 
     // Get current item from each required category
+    const blazerItem = getCurrentItem('blazers');
     const shirtsItem = getCurrentItem('shirts');
-    const outerwearItem = getCurrentItem('outerwear');
-    const bottomwearItem = getCurrentItem('bottomwear');
-    const footwearItem = getCurrentItem('footwear');
+    const pantsItem = getCurrentItem('pants');
+    const shoesItem = getCurrentItem('shoes');
 
     // Validate that items exist for all categories
-    if (!shirtsItem || !outerwearItem || !bottomwearItem || !footwearItem) {
+    if (!blazerItem || !shirtsItem || !pantsItem || !shoesItem) {
       alert("Please ensure all categories have items available");
       return;
     }
 
     const baseUpperStyleId = shirtsItem.styleId;
-    const outerUpperStyleId = outerwearItem.styleId;
-    const bottomsStyleId = bottomwearItem.styleId;
-    const footwearStyleId = footwearItem.styleId;
+    const outerUpperStyleId = blazerItem.styleId;
+    const bottomsStyleId = pantsItem.styleId;
+    const footwearStyleId = shoesItem.styleId;
 
     setTryingOn(true);
     try {
@@ -237,12 +235,12 @@ const ItemSelection = () => {
 
   // Check if all required categories have items available
   const canTryOn = (() => {
-    if (!recommendations) return false;
+    if (!catalog) return false;
     return (
+      getCurrentItem('blazers') !== null &&
       getCurrentItem('shirts') !== null &&
-      getCurrentItem('outerwear') !== null &&
-      getCurrentItem('bottomwear') !== null &&
-      getCurrentItem('footwear') !== null
+      getCurrentItem('pants') !== null &&
+      getCurrentItem('shoes') !== null
     );
   })();
 
@@ -262,11 +260,11 @@ const ItemSelection = () => {
     );
   }
 
-  if (!recommendations) {
+  if (!catalog) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">No items available</p>
+          <p className="text-muted-foreground">No suit items available</p>
           <Button onClick={() => navigate("/onboarding")} className="mt-4">
             Go Back to Onboarding
           </Button>
@@ -285,6 +283,15 @@ const ItemSelection = () => {
           </div>
           <div className="flex items-center gap-4">
             <Button
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => setChangePhotoOpen(true)}
+            >
+              <ImagePlus className="w-4 h-4 mr-2" />
+              Change my photo
+            </Button>
+            <Button
               variant="ghost"
               size="sm"
               className="text-muted-foreground"
@@ -296,6 +303,11 @@ const ItemSelection = () => {
           </div>
         </div>
       </header>
+
+      <ChangePhotoModal
+        open={changePhotoOpen}
+        onOpenChange={setChangePhotoOpen}
+      />
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-6 pt-24 pb-32">
@@ -312,7 +324,7 @@ const ItemSelection = () => {
         {/* Category Sections */}
         <div className="space-y-12">
           {CATEGORIES.map((category) => {
-            const items = recommendations ? category.getItems(recommendations) : [];
+            const items = catalog ? category.getItems(catalog) : [];
             const currentIndex = currentIndices[category.key];
             const currentItem = items[currentIndex] || null;
 

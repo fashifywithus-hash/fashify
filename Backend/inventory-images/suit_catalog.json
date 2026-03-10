@@ -1,0 +1,325 @@
+{
+  "blazers": [
+    {
+      "styleId": "BLZ_001",
+      "category": "blazers",
+      "fileName": "BLZ_001.jpg"
+    },
+    {
+      "styleId": "BLZ_002",
+      "category": "blazers",
+      "fileName": "BLZ_002.jpg"
+    },
+    {
+      "styleId": "BLZ_003",
+      "category": "blazers",
+      "fileName": "BLZ_003.jpg"
+    },
+    {
+      "styleId": "BLZ_004",
+      "category": "blazers",
+      "fileName": "BLZ_004.jpg"
+    },
+    {
+      "styleId": "BLZ_005",
+      "category": "blazers",
+      "fileName": "BLZ_005.jpg"
+    },
+    {
+      "styleId": "BLZ_006",
+      "category": "blazers",
+      "fileName": "BLZ_006.jpg"
+    },
+    {
+      "styleId": "BLZ_007",
+      "category": "blazers",
+      "fileName": "BLZ_007.jpg"
+    },
+    {
+      "styleId": "BLZ_008",
+      "category": "blazers",
+      "fileName": "BLZ_008.jpg"
+    },
+    {
+      "styleId": "BLZ_009",
+      "category": "blazers",
+      "fileName": "BLZ_009.jpg"
+    },
+    {
+      "styleId": "BLZ_010",
+      "category": "blazers",
+      "fileName": "BLZ_010.jpg"
+    },
+    {
+      "styleId": "BLZ_011",
+      "category": "blazers",
+      "fileName": "BLZ_011.jpg"
+    },
+    {
+      "styleId": "BLZ_012",
+      "category": "blazers",
+      "fileName": "BLZ_012.jpg"
+    },
+    {
+      "styleId": "BLZ_013",
+      "category": "blazers",
+      "fileName": "BLZ_013.jpg"
+    },
+    {
+      "styleId": "BLZ_014",
+      "category": "blazers",
+      "fileName": "BLZ_014.jpg"
+    },
+    {
+      "styleId": "BLZ_015",
+      "category": "blazers",
+      "fileName": "BLZ_015.jpg"
+    },
+    {
+      "styleId": "BLZ_016",
+      "category": "blazers",
+      "fileName": "BLZ_016.jpg"
+    },
+    {
+      "styleId": "BLZ_017",
+      "category": "blazers",
+      "fileName": "BLZ_017.jpg"
+    },
+    {
+      "styleId": "BLZ_018",
+      "category": "blazers",
+      "fileName": "BLZ_018.jpg"
+    }
+  ],
+  "shirts": [
+    {
+      "styleId": "SHRT_001",
+      "category": "shirts",
+      "fileName": "SHRT_001.jpg"
+    },
+    {
+      "styleId": "SHRT_002",
+      "category": "shirts",
+      "fileName": "SHRT_002.jpg"
+    },
+    {
+      "styleId": "SHRT_003",
+      "category": "shirts",
+      "fileName": "SHRT_003.jpg"
+    },
+    {
+      "styleId": "SHRT_004",
+      "category": "shirts",
+      "fileName": "SHRT_004.jpg"
+    },
+    {
+      "styleId": "SHRT_005",
+      "category": "shirts",
+      "fileName": "SHRT_005.jpg"
+    },
+    {
+      "styleId": "SHRT_006",
+      "category": "shirts",
+      "fileName": "SHRT_006.jpg"
+    },
+    {
+      "styleId": "SHRT_007",
+      "category": "shirts",
+      "fileName": "SHRT_007.jpg"
+    },
+    {
+      "styleId": "SHRT_008",
+      "category": "shirts",
+      "fileName": "SHRT_008.jpg"
+    },
+    {
+      "styleId": "SHRT_009",
+      "category": "shirts",
+      "fileName": "SHRT_009.jpg"
+    },
+    {
+      "styleId": "SHRT_010",
+      "category": "shirts",
+      "fileName": "SHRT_010.jpg"
+    },
+    {
+      "styleId": "SHRT_011",
+      "category": "shirts",
+      "fileName": "SHRT_011.jpg"
+    },
+    {
+      "styleId": "SHRT_012",
+      "category": "shirts",
+      "fileName": "SHRT_012.jpg"
+    },
+    {
+      "styleId": "SHRT_013",
+      "category": "shirts",
+      "fileName": "SHRT_013.jpg"
+    },
+    {
+      "styleId": "SHRT_014",
+      "category": "shirts",
+      "fileName": "SHRT_014.jpg"
+    },
+    {
+      "styleId": "SHRT_015",
+      "category": "shirts",
+      "fileName": "SHRT_015.jpg"
+    },
+    {
+      "styleId": "SHRT_016",
+      "category": "shirts",
+      "fileName": "SHRT_016.jpg"
+    },
+    {
+      "styleId": "SHRT_017",
+      "category": "shirts",
+      "fileName": "SHRT_017.jpg"
+    },
+    {
+      "styleId": "SHRT_018",
+      "category": "shirts",
+      "fileName": "SHRT_018.jpg"
+    }
+  ],
+  "pants": [
+    {
+      "styleId": "PANT_001",
+      "category": "pants",
+      "fileName": "PANT_001.jpg"
+    },
+    {
+      "styleId": "PANT_002",
+      "category": "pants",
+      "fileName": "PANT_002.jpg"
+    },
+    {
+      "styleId": "PANT_003",
+      "category": "pants",
+      "fileName": "PANT_003.jpg"
+    },
+    {
+      "styleId": "PANT_004",
+      "category": "pants",
+      "fileName": "PANT_004.jpg"
+    },
+    {
+      "styleId": "PANT_005",
+      "category": "pants",
+      "fileName": "PANT_005.jpg"
+    },
+    {
+      "styleId": "PANT_006",
+      "category": "pants",
+      "fileName": "PANT_006.jpg"
+    },
+    {
+      "styleId": "PANT_007",
+      "category": "pants",
+      "fileName": "PANT_007.jpg"
+    },
+    {
+      "styleId": "PANT_008",
+      "category": "pants",
+      "fileName": "PANT_008.jpg"
+    },
+    {
+      "styleId": "PANT_009",
+      "category": "pants",
+      "fileName": "PANT_009.jpg"
+    },
+    {
+      "styleId": "PANT_010",
+      "category": "pants",
+      "fileName": "PANT_010.jpg"
+    },
+    {
+      "styleId": "PANT_011",
+      "category": "pants",
+      "fileName": "PANT_011.jpg"
+    },
+    {
+      "styleId": "PANT_012",
+      "category": "pants",
+      "fileName": "PANT_012.jpg"
+    },
+    {
+      "styleId": "PANT_013",
+      "category": "pants",
+      "fileName": "PANT_013.jpg"
+    },
+    {
+      "styleId": "PANT_014",
+      "category": "pants",
+      "fileName": "PANT_014.jpg"
+    },
+    {
+      "styleId": "PANT_015",
+      "category": "pants",
+      "fileName": "PANT_015.jpg"
+    }
+  ],
+  "shoes": [
+    {
+      "styleId": "SHOE_001",
+      "category": "shoes",
+      "fileName": "SHOE_001.jpg"
+    },
+    {
+      "styleId": "SHOE_002",
+      "category": "shoes",
+      "fileName": "SHOE_002.jpg"
+    },
+    {
+      "styleId": "SHOE_003",
+      "category": "shoes",
+      "fileName": "SHOE_003.jpg"
+    },
+    {
+      "styleId": "SHOE_004",
+      "category": "shoes",
+      "fileName": "SHOE_004.jpg"
+    },
+    {
+      "styleId": "SHOE_005",
+      "category": "shoes",
+      "fileName": "SHOE_005.jpg"
+    },
+    {
+      "styleId": "SHOE_006",
+      "category": "shoes",
+      "fileName": "SHOE_006.jpg"
+    },
+    {
+      "styleId": "SHOE_007",
+      "category": "shoes",
+      "fileName": "SHOE_007.jpg"
+    },
+    {
+      "styleId": "SHOE_008",
+      "category": "shoes",
+      "fileName": "SHOE_008.jpg"
+    },
+    {
+      "styleId": "SHOE_009",
+      "category": "shoes",
+      "fileName": "SHOE_009.jpg"
+    },
+    {
+      "styleId": "SHOE_010",
+      "category": "shoes",
+      "fileName": "SHOE_010.jpg"
+    },
+    {
+      "styleId": "SHOE_011",
+      "category": "shoes",
+      "fileName": "SHOE_011.jpg"
+    },
+    {
+      "styleId": "SHOE_012",
+      "category": "shoes",
+      "fileName": "SHOE_012.jpg"
+    }
+  ]
+}

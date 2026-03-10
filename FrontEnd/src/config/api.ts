@@ -60,6 +60,8 @@ function getApiBaseUrl(): string {
 
 const API_BASE_URL = getApiBaseUrl();
 
+export { getApiBaseUrl, API_BASE_URL };
+
 export interface ApiError {
   error: string;
   message?: string;
@@ -148,6 +150,13 @@ class ApiClient {
   async put<T>(endpoint: string, body?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async patch<T>(endpoint: string, body?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
       body: JSON.stringify(body),
     });
   }

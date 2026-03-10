@@ -1,9 +1,10 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RotateCcw, LogOut } from "lucide-react";
+import { ArrowLeft, RotateCcw, LogOut, ImagePlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ChangePhotoModal } from "@/components/selection/ChangePhotoModal";
 
 interface TryOnResultState {
   success: boolean;
@@ -16,6 +17,7 @@ const TryOnResult = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const state = location.state as TryOnResultState | null;
+  const [changePhotoOpen, setChangePhotoOpen] = useState(false);
 
   useEffect(() => {
     // Redirect to login if not authenticated
@@ -104,7 +106,7 @@ const TryOnResult = () => {
               />
             </div>
 
-            <div className="mt-6 flex justify-center gap-4">
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
               <Button
                 onClick={handleTryAgain}
                 variant="outline"
@@ -113,7 +115,20 @@ const TryOnResult = () => {
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Try Another Outfit
               </Button>
+              <Button
+                onClick={() => setChangePhotoOpen(true)}
+                variant="outline"
+                className="btn-secondary"
+              >
+                <ImagePlus className="w-4 h-4 mr-2" />
+                Change my photo
+              </Button>
             </div>
+            <ChangePhotoModal
+              open={changePhotoOpen}
+              onOpenChange={setChangePhotoOpen}
+              onSuccess={() => {}}
+            />
           </motion.div>
         ) : (
           // Error: Show error message with try again button
