@@ -18,21 +18,25 @@ export interface CatalogResult {
 }
 
 const INVENTORY_ROOT = path.resolve(__dirname, "..", "..", "inventory-images");
-const CATALOG_PATH = path.join(INVENTORY_ROOT, "suit_catalog.json");
+const JEWELLERY_CATALOG_PATH = path.join(
+  INVENTORY_ROOT,
+  "jewellery",
+  "jewellery_catalog.json"
+);
 
 class CatalogService {
   private catalog: CatalogResult | null = null;
 
-  private buildImageUrl(category: SuitCategoryKey, fileName: string): string {
+  private buildImageUrl(relativePath: string): string {
     // Express serves Backend/inventory-images under /static/suits
-    return `/static/suits/${category}/${fileName}`;
+    return `/static/suits/${relativePath}`;
   }
 
-  private loadRawCatalog(): any {
-    if (!fs.existsSync(CATALOG_PATH)) {
-      return { blazers: [], shirts: [], pants: [], shoes: [] };
+  private loadJewelleryCatalog(): any {
+    if (!fs.existsSync(JEWELLERY_CATALOG_PATH)) {
+      return { necklines: [], sarees: [] };
     }
-    const raw = fs.readFileSync(CATALOG_PATH, "utf8");
+    const raw = fs.readFileSync(JEWELLERY_CATALOG_PATH, "utf8");
     return JSON.parse(raw);
   }
 
@@ -41,29 +45,36 @@ class CatalogService {
       return this.catalog;
     }
 
-    const raw = this.loadRawCatalog();
+    const raw = this.loadJewelleryCatalog();
+    const necklines = (raw.necklines || []) as { styleId: string; fileName: string }[];
+    const sarees = (raw.sarees || []) as { styleId: string; fileName: string }[];
 
-    const buildCategory = (category: SuitCategoryKey): CatalogItem[] => {
-      const entries = (raw[category] || []) as { styleId: string; fileName: string }[];
-      const categoryDir = path.join(INVENTORY_ROOT, category);
-      return entries
-        .filter((entry) => {
-          const filePath = path.join(categoryDir, entry.fileName);
-          return fs.existsSync(filePath);
-        })
-        .map((entry) => ({
-          styleId: entry.styleId,
-          category,
-          fileName: entry.fileName,
-          imageUrl: this.buildImageUrl(category, entry.fileName),
-        }));
-    };
+    const necklinesDir = path.join(INVENTORY_ROOT, "jewellery", "necklines");
+    const sareesDir = path.join(INVENTORY_ROOT, "jewellery", "sarees");
+
+    const blazers: CatalogItem[] = necklines
+      .filter((entry) => fs.existsSync(path.join(necklinesDir, entry.fileName)))
+      .map((entry) => ({
+        styleId: entry.styleId,
+        category: "blazers",
+        fileName: entry.fileName,
+        imageUrl: this.buildImageUrl(`jewellery/necklines/${entry.fileName}`),
+      }));
+
+    const pants: CatalogItem[] = sarees
+      .filter((entry) => fs.existsSync(path.join(sareesDir, entry.fileName)))
+      .map((entry) => ({
+        styleId: entry.styleId,
+        category: "pants",
+        fileName: entry.fileName,
+        imageUrl: this.buildImageUrl(`jewellery/sarees/${entry.fileName}`),
+      }));
 
     this.catalog = {
-      blazers: buildCategory("blazers"),
-      shirts: buildCategory("shirts"),
-      pants: buildCategory("pants"),
-      shoes: buildCategory("shoes"),
+      blazers,
+      shirts: [],
+      pants,
+      shoes: [],
     };
 
     return this.catalog;

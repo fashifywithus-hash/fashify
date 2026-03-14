@@ -1,0 +1,56 @@
+{
+  "necklines": [
+    {
+      "styleId": "neckline_1",
+      "category": "necklines",
+      "fileName": "neckline_1.jpg"
+    },
+    {
+      "styleId": "neckline_2",
+      "category": "necklines",
+      "fileName": "neckline_2.jpg"
+    },
+    {
+      "styleId": "neckline_3",
+      "category": "necklines",
+      "fileName": "neckline_3.jpg"
+    },
+    {
+      "styleId": "neckline_4",
+      "category": "necklines",
+      "fileName": "neckline_4.jpg"
+    },
+    {
+      "styleId": "neckline_5",
+      "category": "necklines",
+      "fileName": "neckline_5.jpg"
+    },
+    {
+      "styleId": "neckline_6",
+      "category": "necklines",
+      "fileName": "neckline_6.jpg"
+    }
+  ],
+  "sarees": [
+    {
+      "styleId": "saree_1",
+      "category": "sarees",
+      "fileName": "saree_1.jpg"
+    },
+    {
+      "styleId": "saree_2",
+      "category": "sarees",
+      "fileName": "saree_2.jpg"
+    },
+    {
+      "styleId": "saree_3",
+      "category": "sarees",
+      "fileName": "saree_3.jpg"
+    },
+    {
+      "styleId": "saree_4",
+      "category": "sarees",
+      "fileName": "saree_4.jpg"
+    }
+  ]
+}

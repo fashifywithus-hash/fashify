@@ -1,7 +1,6 @@
 import express, { Response } from "express";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { Profile } from "../models/Profile";
-import { catalogService } from "../services/catalogService";
 import { tryOnService } from "../services/tryOnService";
 import { logger } from "../utils/logger";
 
@@ -9,21 +8,19 @@ const router = express.Router();
 
 /**
  * POST /api/tryon
- * Generate try-on image using Gemini API
+ * Generate a single jewellery try-on image using Gemini API
  * Requires authentication - automatically uses userId from token
  *
  * Request body:
  * {
- *   baseUpperStyleId: string,    // Shirt inside blazer (e.g., SHRT_001)
- *   outerUpperStyleId: string,   // Blazer/jacket (e.g., BLZ_001)
- *   bottomsStyleId: string,      // Pants (e.g., PANT_001)
- *   footwearStyleId: string      // Shoes (e.g., SHOE_001)
+ *   necklineStyleId: string,  // Jewellery inventory ID (e.g., NECK_001)
+ *   sareeStyleId: string      // Saree inventory ID (e.g., SAREE_001)
  * }
- * 
+ *
  * Response:
  * {
  *   success: boolean,
- *   image: string,  // Base64 encoded image data URL
+ *   image: string,   // Base64 encoded image data URL
  *   message: string
  * }
  */
@@ -36,22 +33,20 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.user.id;
-    const { baseUpperStyleId, outerUpperStyleId, bottomsStyleId, footwearStyleId } = req.body;
+    const { necklineStyleId, sareeStyleId } = req.body;
 
     // Validate required parameters
-    if (!baseUpperStyleId || !outerUpperStyleId || !bottomsStyleId || !footwearStyleId) {
+    if (!necklineStyleId || !sareeStyleId) {
       return res.status(400).json({
         error: "Missing required parameters",
-        message: "All four styleIds are required: baseUpperStyleId, outerUpperStyleId, bottomsStyleId, footwearStyleId",
+        message: "Both styleIds are required: necklineStyleId, sareeStyleId",
       });
     }
 
-    logger.info("Try-on request for user", {
+    logger.info("Jewellery try-on request for user", {
       userId,
-      baseUpper: baseUpperStyleId,
-      outerUpper: outerUpperStyleId,
-      bottoms: bottomsStyleId,
-      footwear: footwearStyleId,
+      necklineStyleId,
+      sareeStyleId,
     });
 
     // Fetch user's profile to get uploaded photo (used as Image 0 in Gemini try-on)
@@ -73,42 +68,20 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 
     logger.info("Found user profile with photo", { userId });
 
-    // Validate styleIds against suit catalog (only items with existing image files)
-    const catalog = catalogService.getCatalog();
-
-    const baseUpperValid = catalog.shirts.some((i) => i.styleId === baseUpperStyleId);
-    const outerUpperValid = catalog.blazers.some((i) => i.styleId === outerUpperStyleId);
-    const bottomsValid = catalog.pants.some((i) => i.styleId === bottomsStyleId);
-    const footwearValid = catalog.shoes.some((i) => i.styleId === footwearStyleId);
-
-    if (!baseUpperValid || !outerUpperValid || !bottomsValid || !footwearValid) {
-      const missing: string[] = [];
-      if (!baseUpperValid) missing.push(`baseUpperStyleId (shirt): ${baseUpperStyleId}`);
-      if (!outerUpperValid) missing.push(`outerUpperStyleId (blazer): ${outerUpperStyleId}`);
-      if (!bottomsValid) missing.push(`bottomsStyleId (pants): ${bottomsStyleId}`);
-      if (!footwearValid) missing.push(`footwearStyleId (shoes): ${footwearStyleId}`);
-      return res.status(404).json({
-        error: "Invalid styleIds",
-        message: `The following styleIds were not found in suit catalog: ${missing.join(", ")}`,
-      });
-    }
-
-    // Generate try-on image using Gemini API
-    logger.info("Calling Gemini API to generate try-on image");
-    const tryOnImage = await tryOnService.generateTryOn({
+    // Generate jewellery try-on image using Gemini API
+    logger.info("Calling Gemini API to generate jewellery try-on image");
+    const result = await tryOnService.generateTryOn({
       userPhoto: profile.photo_url,
-      baseUpperStyleId,
-      outerUpperStyleId,
-      bottomsStyleId,
-      footwearStyleId,
+      necklineStyleId,
+      sareeStyleId,
     });
 
-    logger.info("Try-on image generated successfully");
+    logger.info("Jewellery try-on image generated successfully");
 
     res.json({
       success: true,
-      image: tryOnImage,
-      message: "Try-on image generated successfully",
+      image: result.image,
+      message: "Jewellery try-on image generated successfully",
     });
   } catch (error: any) {
     logger.error("Try-on error", error);

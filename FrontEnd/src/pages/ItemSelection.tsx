@@ -11,7 +11,7 @@ import { tryOnService } from "@/services/tryOnService";
 import { SelectableImageCard } from "@/components/selection/SelectableImageCard";
 import { ChangePhotoModal } from "@/components/selection/ChangePhotoModal";
 
-type CategoryKey = "blazers" | "shirts" | "pants" | "shoes";
+type CategoryKey = "necklines" | "sarees";
 
 interface CategoryConfig {
   key: CategoryKey;
@@ -22,28 +22,16 @@ interface CategoryConfig {
 
 const CATEGORIES: CategoryConfig[] = [
   {
-    key: "blazers",
-    title: "Blazers",
-    emoji: "🧥",
+    key: "necklines",
+    title: "Necklines & Jewelry",
+    emoji: "📿",
     getItems: (result) => result.blazers,
   },
   {
-    key: "shirts",
-    title: "Shirts (inside blazer)",
-    emoji: "👕",
-    getItems: (result) => result.shirts,
-  },
-  {
-    key: "pants",
-    title: "Pants",
-    emoji: "👖",
+    key: "sarees",
+    title: "Sarees",
+    emoji: "🧵",
     getItems: (result) => result.pants,
-  },
-  {
-    key: "shoes",
-    title: "Shoes",
-    emoji: "👟",
-    getItems: (result) => result.shoes,
   },
 ];
 
@@ -60,18 +48,14 @@ const ItemSelection = () => {
   
   // Track current index for each category (starts at 0)
   const [currentIndices, setCurrentIndices] = useState<CategoryIndices>({
-    blazers: 0,
-    shirts: 0,
-    pants: 0,
-    shoes: 0,
+    necklines: 0,
+    sarees: 0,
   });
 
   // Track mouse movement to show/hide navigation arrows
   const [showArrows, setShowArrows] = useState<Record<CategoryKey, boolean>>({
-    blazers: false,
-    shirts: false,
-    pants: false,
-    shoes: false,
+    necklines: false,
+    sarees: false,
   });
   
   const [mouseMoveTimeout, setMouseMoveTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -104,7 +88,7 @@ const ItemSelection = () => {
 
       setUserName(profile.name || "");
 
-      // Load suit catalog from backend API
+      // Load jewellery catalog from backend API (reusing existing catalog endpoint)
       const result = await catalogService.getCatalog();
       setCatalog(result);
     } catch (error: any) {
@@ -182,30 +166,24 @@ const ItemSelection = () => {
   const handleTryOn = async () => {
     if (!catalog) return;
 
-    // Get current item from each required category
-    const blazerItem = getCurrentItem('blazers');
-    const shirtsItem = getCurrentItem('shirts');
-    const pantsItem = getCurrentItem('pants');
-    const shoesItem = getCurrentItem('shoes');
+    // Get current item from each required jewellery category
+    const necklineItem = getCurrentItem("necklines");
+    const sareeItem = getCurrentItem("sarees");
 
-    // Validate that items exist for all categories
-    if (!blazerItem || !shirtsItem || !pantsItem || !shoesItem) {
-      alert("Please ensure all categories have items available");
+    // Validate that items exist for both categories
+    if (!necklineItem || !sareeItem) {
+      alert("Please ensure both neckline and saree categories have items available");
       return;
     }
 
-    const baseUpperStyleId = shirtsItem.styleId;
-    const outerUpperStyleId = blazerItem.styleId;
-    const bottomsStyleId = pantsItem.styleId;
-    const footwearStyleId = shoesItem.styleId;
+    const necklineStyleId = necklineItem.styleId;
+    const sareeStyleId = sareeItem.styleId;
 
     setTryingOn(true);
     try {
       const response = await tryOnService.tryOn({
-        baseUpperStyleId,
-        outerUpperStyleId,
-        bottomsStyleId,
-        footwearStyleId,
+        necklineStyleId,
+        sareeStyleId,
       });
 
       // Navigate to result page with success state and image
@@ -237,10 +215,8 @@ const ItemSelection = () => {
   const canTryOn = (() => {
     if (!catalog) return false;
     return (
-      getCurrentItem('blazers') !== null &&
-      getCurrentItem('shirts') !== null &&
-      getCurrentItem('pants') !== null &&
-      getCurrentItem('shoes') !== null
+      getCurrentItem("necklines") !== null &&
+      getCurrentItem("sarees") !== null
     );
   })();
 
@@ -317,7 +293,7 @@ const ItemSelection = () => {
             Pick items you like{userName && <span className="text-primary">, {userName}</span>}
           </h1>
           <p className="text-muted-foreground">
-            Select at least one item from each category to try on
+            Select one neckline and one saree to try on
           </p>
         </div>
 

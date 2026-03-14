@@ -82,7 +82,7 @@ const TryOnResult = () => {
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-6 pt-24 pb-8 flex items-center justify-center">
         {state.success && state.image ? (
-          // Success: Show the try-on image
+          // Success: Show the single try-on image
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -91,7 +91,9 @@ const TryOnResult = () => {
           >
             <div className="text-center mb-6">
               <h1 className="heading-section mb-2">Your Try-On Result</h1>
-              <p className="text-muted-foreground">Here's how you look in your selected outfit!</p>
+              <p className="text-muted-foreground">
+                Here's how you look in your selected jewellery and saree.
+              </p>
             </div>
 
             <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-card border border-border">
@@ -113,7 +115,7 @@ const TryOnResult = () => {
                 className="btn-secondary"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Try Another Outfit
+                Try Another Combination
               </Button>
               <Button
                 onClick={() => setChangePhotoOpen(true)}

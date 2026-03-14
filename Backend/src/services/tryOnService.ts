@@ -7,12 +7,14 @@ import fs from "fs";
 import path from "path";
 import { logger } from "../utils/logger";
 
-interface TryOnRequest {
+interface JewelleryTryOnRequest {
   userPhoto: string; // Base64 data URL
-  baseUpperStyleId: string;
-  outerUpperStyleId: string;
-  bottomsStyleId: string;
-  footwearStyleId: string;
+  necklineStyleId: string;
+  sareeStyleId: string;
+}
+
+interface JewelleryTryOnResult {
+  image: string;
 }
 
 class TryOnService {
@@ -88,43 +90,44 @@ class TryOnService {
     return Buffer.from(base64Data, "base64");
   }
 
-  /**
-   * Resolve image file path for a styleId based on new suit inventory layout.
-   *
-   * Convention:
-   * - BLZ_xxx -> inventory-images/blazers/BLZ_xxx.jpg
-   * - SHRT_xxx -> inventory-images/shirts/SHRT_xxx.jpg
-   * - PANT_xxx -> inventory-images/pants/PANT_xxx.jpg
-   * - SHOE_xxx -> inventory-images/shoes/SHOE_xxx.jpg
-   */
   private getImagePathForStyleId(styleId: string): string | null {
-    const upper = styleId.toUpperCase();
-    let folder: string | null = null;
+    const lower = styleId.toLowerCase();
+    let folderParts: string[] | null = null;
+    let fileName = `${styleId}.jpg`;
 
-    if (upper.startsWith("BLZ_")) {
-      folder = "blazers";
-    } else if (upper.startsWith("SHRT_")) {
-      folder = "shirts";
-    } else if (upper.startsWith("PANT_")) {
-      folder = "pants";
-    } else if (upper.startsWith("SHOE_")) {
-      folder = "shoes";
+    // Jewellery-only mapping in this branch
+    if (lower.startsWith("neckline_")) {
+      folderParts = ["jewellery", "necklines"];
+    } else if (lower.startsWith("saree_")) {
+      folderParts = ["jewellery", "sarees"];
+    } else if (lower.startsWith("neck_")) {
+      // Allow NECK_* styleIds as aliases for necklines
+      folderParts = ["jewellery", "necklines"];
+    } else if (lower.startsWith("saree_")) {
+      folderParts = ["jewellery", "sarees"];
     }
 
-    if (!folder) {
-      logger.error("Unknown styleId prefix for try-on", { styleId });
+    if (!folderParts) {
+      logger.error("Unknown jewellery styleId prefix for try-on", { styleId });
       return null;
     }
 
     // inventory-images is at Backend/inventory-images relative to this file
-    const imagePath = path.resolve(__dirname, "..", "..", "inventory-images", folder, `${upper}.jpg`);
+    const imagePath = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "inventory-images",
+      ...folderParts,
+      fileName
+    );
 
     if (!fs.existsSync(imagePath)) {
-      logger.error("Image file not found for styleId", { styleId, folder, imagePath });
+      logger.error("Image file not found for jewellery styleId", { styleId, imagePath });
       return null;
     }
 
-    logger.info("Resolved image for styleId", { styleId, folder, imagePath });
+    logger.info("Resolved image for jewellery styleId", { styleId, imagePath });
     return imagePath;
   }
 
@@ -139,98 +142,79 @@ class TryOnService {
   }
 
   /**
-   * Generate try-on image using Gemini API
+   * Generate a single jewellery try-on image using Gemini API
    */
-  async generateTryOn(request: TryOnRequest): Promise<string> {
+  async generateTryOn(request: JewelleryTryOnRequest): Promise<JewelleryTryOnResult> {
     try {
-      logger.info("Starting try-on generation process");
+      logger.info("Starting jewellery try-on generation process");
 
       // Convert user photo from data URL to buffer
       logger.info("Processing user photo");
       const userPhotoBuffer = this.dataURLToBuffer(request.userPhoto);
 
-      // Get image paths for each styleId using new suit inventory layout
-      logger.info("Loading suit item images");
-      const baseUpperImagePath = this.getImagePathForStyleId(request.baseUpperStyleId);
-      const outerUpperImagePath = this.getImagePathForStyleId(request.outerUpperStyleId);
-      const bottomsImagePath = this.getImagePathForStyleId(request.bottomsStyleId);
-      const footwearImagePath = this.getImagePathForStyleId(request.footwearStyleId);
+      // Get image paths for jewellery inventory
+      logger.info("Loading jewellery item images");
+      const necklineImagePath = this.getImagePathForStyleId(request.necklineStyleId);
+      const sareeImagePath = this.getImagePathForStyleId(request.sareeStyleId);
 
-      // Validate all images exist
-      if (!baseUpperImagePath || !outerUpperImagePath || !bottomsImagePath || !footwearImagePath) {
-        const missing = [];
-        if (!baseUpperImagePath) missing.push(`baseUpper (${request.baseUpperStyleId})`);
-        if (!outerUpperImagePath) missing.push(`outerUpper (${request.outerUpperStyleId})`);
-        if (!bottomsImagePath) missing.push(`bottoms (${request.bottomsStyleId})`);
-        if (!footwearImagePath) missing.push(`footwear (${request.footwearStyleId})`);
+      // Validate required images exist
+      const missing: string[] = [];
+      if (!necklineImagePath) missing.push(`neckline (${request.necklineStyleId})`);
+      if (!sareeImagePath) missing.push(`saree (${request.sareeStyleId})`);
+      if (missing.length > 0) {
         throw new Error(`Missing images for: ${missing.join(", ")}`);
       }
 
       // Load all images
-      const baseUpperBuffer = this.loadImageFile(baseUpperImagePath);
-      const outerUpperBuffer = this.loadImageFile(outerUpperImagePath);
-      const bottomsBuffer = this.loadImageFile(bottomsImagePath);
-      const footwearBuffer = this.loadImageFile(footwearImagePath);
+      const necklineBuffer = this.loadImageFile(necklineImagePath!);
+      const sareeBuffer = this.loadImageFile(sareeImagePath!);
 
-      logger.info("All images loaded successfully");
+      logger.info("All jewellery images loaded successfully");
 
       // Initialize Gemini client
       const ai = this.getClient();
 
-      // Prepare contents array with images and prompt
-      // Using exact prompt from the Python script
-      // Structure: array of parts (images and text) - matches Python script exactly
+      // Prepare contents array with images and couture prompt
+      // IMAGE 0: Identity (user)
+      // IMAGE 1: Jewelry (necklace + earrings)
+      // IMAGE 2: Attire (saree)
       const contents: any[] = [
         {
           inlineData: {
             data: userPhotoBuffer.toString("base64"),
             mimeType: "image/jpeg",
           },
-        }, // Image 0: Master Identity (User Photo)
+        }, // IMAGE 0 (Identity)
         {
           inlineData: {
-            data: baseUpperBuffer.toString("base64"),
+            data: necklineBuffer.toString("base64"),
             mimeType: "image/jpeg",
           },
-        }, // Image 1: Base layer (T-shirt)
+        }, // IMAGE 1 (Jewelry)
         {
           inlineData: {
-            data: outerUpperBuffer.toString("base64"),
+            data: sareeBuffer.toString("base64"),
             mimeType: "image/jpeg",
           },
-        }, // Image 2: Outer layer (Jacket)
-        {
-          inlineData: {
-            data: bottomsBuffer.toString("base64"),
-            mimeType: "image/jpeg",
-          },
-        }, // Image 3: Bottoms
-        {
-          inlineData: {
-            data: footwearBuffer.toString("base64"),
-            mimeType: "image/jpeg",
-          },
-        }, // Image 4: Footwear
-        `
-    INSTRUCTION: HIGH-FIDELITY CHARACTER PRESERVATION TRY-ON
-    
-    1. MASTER IDENTITY: Use Image 0 as the ABSOLUTE structural reference for the person's 
-       face, facial features, skin tone, and exact body shape. 
-       DO NOT blend or average this face with any faces found in the inventory images.
-    
-    2. CLOTHING REPLACEMENT:
-       - Take ONLY the textures and shapes of the clothing from Images 1, 2, 3, and 4.
-       - Discard everything else from those images (people, backgrounds, heads).
-       - Wear the Jacket (Image 2) over the T-shirt (Image 1).
-    
-    3. POSITIONING: 
-       - Keep the person in the exact center-frame as seen in Image 0.
-       - Match the lighting of the final image to a high-end fashion studio.
-    
-    4. CONSTRAINT: If Image 0 has a transparent background, place the final person 
-       on a clean, neutral studio grey background. Ensure the jawline and eyes 
-       perfectly match Image 0 at 100% fidelity.
-    `,
+        }, // IMAGE 2 (Attire / Saree)
+        `--- HIGH-FIDELITY MULTI-VIEW VIRTUAL COUTURE TRY-ON ---
+
+**INPUT MAPPING:**
+- IMAGE 0 (Identity): The target person. Maintain 100% fidelity of the face, skin tone, and body shape.
+- IMAGE 1 (Jewelry): Source the necklace and earrings from this image. Ensure the gold filigree and fringe details are preserved.
+- IMAGE 2 (Attire): The Saree. Use the exact fabric texture, color, and border pattern from this image.
+
+**TASK:** Generate ONE photorealistic, high-end fashion image. The person from Image 0 must be styled wearing the jewelry from Image 1 and the saree from Image 2.
+
+### VIEW A: UPPER BODY CLOSE-UP (Frontal)
+- **Composition:** Centered portrait from the waist up.
+- **Focus:** Sharp detail on the necklace drape and the way the earrings frame the face. The saree blouse and the 'pallu' (shoulder drape) must be visible and perfectly tucked.
+
+**TECHNICAL CONSTRAINTS:**
+1. **Lighting:** Use consistent warm, professional studio lighting across all three images.
+2. **Background:** Use a clean, neutral, high-end studio grey or deep brown background to make the gold and fabric pop.
+3. **Fidelity:** Do not alter the user's facial features. The jewelry and saree must look like they are physically on the person, including realistic shadows on the skin and fabric.
+`,
       ];
 
       logger.info("Calling Gemini API using models.generateContent");
@@ -250,8 +234,7 @@ class TryOnService {
 
       logger.info("Gemini API response received");
 
-      // Extract image from response - matches Python script structure
-      // Python: response.candidates[0].content.parts with inline_data
+      // Extract image from response
       if (!response.candidates || response.candidates.length === 0) {
         throw new Error("No candidates in Gemini API response");
       }
@@ -261,31 +244,30 @@ class TryOnService {
         throw new Error("No content parts in Gemini API response");
       }
 
-      // Find image part in response
-      let imageBase64: string | null = null;
-      let mimeType: string = "image/png";
-      
-      for (const part of candidate.content.parts) {
-        if (part.inlineData && part.inlineData.data) {
-          imageBase64 = part.inlineData.data;
-          mimeType = part.inlineData.mimeType || "image/png";
-          logger.info("Found image in response", { mimeType });
-          break;
-        }
+      const imageParts = candidate.content.parts.filter(
+        (part: any) => part.inlineData && part.inlineData.data
+      );
+
+      if (imageParts.length < 1) {
+        const partTypes = candidate.content.parts.map((p: any) =>
+          p.inlineData ? "image" : "text"
+        );
+        logger.error("Expected at least 1 image part in Gemini API response", {
+          imagePartCount: imageParts.length,
+          partTypes,
+        });
+        throw new Error(
+          `Gemini response did not contain an image (found ${imageParts.length})`
+        );
       }
 
-      if (!imageBase64) {
-        const partTypes = candidate.content.parts.map((p: any) => p.inlineData ? "image" : "text");
-        logger.error("No image data found in Gemini API response", { partTypes });
-        throw new Error("No image data found in Gemini API response");
-      }
+      const [partA] = imageParts;
+      const mime = (partA.inlineData?.mimeType as string | undefined) || "image/png";
+      const image = `data:${mime};base64,${partA.inlineData!.data}`;
 
-      // Convert to data URL format
-      const dataURL = `data:${mimeType};base64,${imageBase64}`;
+      logger.info("Jewellery try-on image generated");
 
-      logger.info("Try-on image generated and converted to data URL");
-
-      return dataURL;
+      return { image };
     } catch (error: any) {
       logger.error("Error in try-on generation", error);
       throw new Error(`Failed to generate try-on image: ${error.message}`);
