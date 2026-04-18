@@ -222,17 +222,24 @@ class TryOnService {
       // Call Gemini API using models.generateContent - matches Python script exactly
       // Python: client.models.generate_content() with response_modalities=['IMAGE']
       const response = await ai.models.generateContent({
-        model: "gemini-3-pro-image-preview",
+        model: "gemini-3.1-flash-image-preview",
         contents: contents,
         config: {
           responseModalities: ["IMAGE"],
+          // All specific generation 'knobs' belong here
+          imageConfig: {
+            imageSize: "512", // This reduces cost to ~$0.045
+            aspectRatio: "1:1",
+          },
           thinkingConfig: {
+            includeThoughts: true,
             thinkingBudget: 32000,
           },
         },
       });
 
       logger.info("Gemini API response received");
+      logger.info("Gemini API response", { response });
 
       // Extract image from response
       if (!response.candidates || response.candidates.length === 0) {
